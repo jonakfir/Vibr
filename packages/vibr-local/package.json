@@ -1,0 +1,37 @@
+{
+  "name": "vibr-local",
+  "version": "0.1.0",
+  "description": "Local server giving the Vibr web app access to local files, git, and terminal",
+  "main": "dist/cli.js",
+  "bin": {
+    "vibr-local": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "ts-node src/cli.ts",
+    "build": "tsc",
+    "build:mac-arm64": "pkg dist/cli.js --targets node18-macos-arm64 --output bin/vibr-local-mac-arm64"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "chokidar": "^3.6.0",
+    "commander": "^12.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "fs-extra": "^11.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "open": "^8.4.2",
+    "simple-git": "^3.27.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20.16.0",
+    "@types/ws": "^8.5.12",
+    "pkg": "^5.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0"
+  }
+}
