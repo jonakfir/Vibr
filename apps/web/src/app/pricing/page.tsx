@@ -56,7 +56,7 @@ export default function PricingPage() {
           >
             <div className="flex items-baseline justify-center">
               <span className="font-heading font-light text-hero text-foreground">
-                $29
+                $49
               </span>
               <span className="font-heading font-light text-subtitle text-muted ml-2">
                 /mo

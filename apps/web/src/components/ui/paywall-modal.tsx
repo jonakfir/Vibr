@@ -64,7 +64,7 @@ export function PaywallModal({ open, onClose, feature, used, limit }: PaywallMod
             </p>
 
             <div className="flex items-baseline gap-2 mb-8">
-              <span className="font-heading font-light text-display text-foreground">$29</span>
+              <span className="font-heading font-light text-display text-foreground">$49</span>
               <span className="font-body text-small text-muted">/mo</span>
             </div>
 
