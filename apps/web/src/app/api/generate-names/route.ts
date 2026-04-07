@@ -9,11 +9,12 @@ async function checkDomainAvailability(
 
   try {
     const response = await fetch(
-      `https://domainr.p.rapidapi.com/v2/status?domain=${encodeURIComponent(domain)}`,
+      `https://domains-api.p.rapidapi.com/domain/${encodeURIComponent(domain)}`,
       {
         headers: {
           "X-RapidAPI-Key": process.env.RAPIDAPI_KEY || "",
-          "X-RapidAPI-Host": "domainr.p.rapidapi.com",
+          "X-RapidAPI-Host": "domains-api.p.rapidapi.com",
+          "Content-Type": "application/json",
         },
       }
     );
@@ -23,12 +24,7 @@ async function checkDomainAvailability(
     }
 
     const data = await response.json();
-    // Domainr returns status array; "undelegated" or "inactive" typically means available
-    const status = data.status?.[0]?.status || "";
-    const available =
-      status.includes("undelegated") ||
-      status.includes("inactive") ||
-      status.includes("available");
+    const available = data.available === true || data.status === "available";
 
     return { domain, available };
   } catch {
