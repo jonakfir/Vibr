@@ -7,3 +7,4 @@ bin/
 .env.production.local
 *.tsbuildinfo
 .DS_Store
+.vercel

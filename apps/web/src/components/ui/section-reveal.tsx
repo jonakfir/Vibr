@@ -15,7 +15,7 @@ export function SectionReveal({
   className,
 }: SectionRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const isInView = useInView(ref, { once: true, margin: "100px 0px" });
 
   return (
     <motion.div
