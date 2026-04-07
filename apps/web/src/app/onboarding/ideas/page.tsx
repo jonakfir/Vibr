@@ -39,7 +39,11 @@ export default function IdeasPage() {
       const res = await fetch("/api/generate-ideas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile }),
+        body: JSON.stringify({
+          skills: profile.skills,
+          interests: profile.interests,
+          experience_level: profile.experience_level,
+        }),
       });
 
       if (res.ok) {

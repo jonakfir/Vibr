@@ -14,6 +14,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("email, subscription_status")
+      .eq("id", user.id)
+      .single();
+
+    const { hasProAccess } = await import("@/lib/auth");
+    if (!hasProAccess(profileData?.email, profileData?.subscription_status)) {
+      return NextResponse.json({ error: "pro_required" }, { status: 403 });
+    }
+
     const { idea, product_name } = await request.json();
 
     if (!idea || !product_name) {

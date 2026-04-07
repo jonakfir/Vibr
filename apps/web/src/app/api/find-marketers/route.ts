@@ -24,6 +24,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("email, subscription_status")
+      .eq("id", user.id)
+      .single();
+
+    const { checkLimit, trackUsage } = await import("@/lib/usage");
+    const limitCheck = await checkLimit(user.id, profileData?.email, profileData?.subscription_status, "marketer_scan");
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: "limit_reached", used: limitCheck.used, limit: limitCheck.limit, action: "marketer_scan" },
+        { status: 403 }
+      );
+    }
+
     const { idea, sector, product_name } = await request.json();
 
     if (!idea || !sector || !product_name) {
@@ -165,6 +180,8 @@ Sort by match_percent descending. Return ONLY valid JSON array.`,
         );
       }
     }
+
+    await trackUsage(user.id, "marketer_scan");
 
     return NextResponse.json({ marketers });
   } catch (error) {

@@ -198,3 +198,25 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ============================================
+-- USAGE TRACKING
+-- ============================================
+create table public.usage (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  action_type text not null,
+  created_at timestamptz default now() not null
+);
+
+create index idx_usage_user_action on public.usage(user_id, action_type);
+
+alter table public.usage enable row level security;
+
+create policy "Users can view their own usage"
+  on public.usage for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own usage"
+  on public.usage for insert
+  with check (auth.uid() = user_id);

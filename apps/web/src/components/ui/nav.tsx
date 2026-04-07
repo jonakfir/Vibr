@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { GhostButton } from "./ghost-button";
 
 const NAV_LINKS = [
-  { label: "Founders", href: "/founders" },
   { label: "Pricing", href: "/pricing" },
+  { label: "Download", href: "/download" },
 ];
 
 export function Nav() {
@@ -21,12 +21,29 @@ export function Nav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleSignIn = async () => {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
+  };
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/";
   };
 
   return (
@@ -58,15 +75,34 @@ export function Nav() {
             </Link>
           ))}
 
-          <button
-            type="button"
-            onClick={handleSignIn}
-            className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300"
-          >
-            Sign in
-          </button>
-
-          <GhostButton href="/onboarding">Start building</GhostButton>
+          {user ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300"
+              >
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleSignIn}
+                className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300"
+              >
+                Sign in
+              </button>
+              <GhostButton href="/onboarding">Start building</GhostButton>
+            </>
+          )}
         </div>
       </div>
     </motion.nav>

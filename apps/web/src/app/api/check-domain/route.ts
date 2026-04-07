@@ -13,6 +13,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("email, subscription_status")
+      .eq("id", user.id)
+      .single();
+
+    const { checkLimit, trackUsage } = await import("@/lib/usage");
+    const limitCheck = await checkLimit(user.id, profileData?.email, profileData?.subscription_status, "domain_check");
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: "limit_reached", used: limitCheck.used, limit: limitCheck.limit, action: "domain_check" },
+        { status: 403 }
+      );
+    }
+
     const { domain } = await request.json();
 
     if (!domain) {
@@ -53,6 +68,8 @@ export async function POST(request: NextRequest) {
       status.includes("undelegated") ||
       status.includes("inactive") ||
       status.includes("available");
+
+    await trackUsage(user.id, "domain_check");
 
     return NextResponse.json({ domain, available });
   } catch (error) {

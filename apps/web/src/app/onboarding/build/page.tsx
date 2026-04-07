@@ -557,8 +557,8 @@ export default function BuildPage() {
 
         {/* bottom bar */}
         <div className="border-t border-border px-5 py-3 flex justify-end">
-          <GhostButton href="/onboarding/launch">
-            Continue to launch
+          <GhostButton href="/onboarding/deploy">
+            Continue to deploy
           </GhostButton>
         </div>
       </div>

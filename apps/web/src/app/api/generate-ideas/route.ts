@@ -14,6 +14,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Usage check
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email, subscription_status")
+      .eq("id", user.id)
+      .single();
+
+    const { checkLimit, trackUsage } = await import("@/lib/usage");
+    const limitCheck = await checkLimit(user.id, profile?.email, profile?.subscription_status, "idea_generation");
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: "limit_reached", used: limitCheck.used, limit: limitCheck.limit, action: "idea_generation" },
+        { status: 403 }
+      );
+    }
+
     const { skills, interests, experience_level } = await request.json();
 
     if (!skills || !interests || !experience_level) {
@@ -72,6 +88,8 @@ Return ONLY a valid JSON array of 5 objects. No other text.`,
         );
       }
     }
+
+    await trackUsage(user.id, "idea_generation");
 
     return NextResponse.json({ ideas });
   } catch (error) {

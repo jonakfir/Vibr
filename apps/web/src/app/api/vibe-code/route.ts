@@ -19,6 +19,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("email, subscription_status")
+      .eq("id", user.id)
+      .single();
+
+    const { hasProAccess } = await import("@/lib/auth");
+    if (!hasProAccess(profileData?.email, profileData?.subscription_status)) {
+      return new Response(JSON.stringify({ error: "pro_required" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const { messages, provider, apiKey, model, baseUrl } = await request.json();
 
     if (!messages || !provider || !apiKey) {

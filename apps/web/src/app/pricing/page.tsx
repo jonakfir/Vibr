@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Nav } from "@/components/ui/nav";
 import { Footer } from "@/components/ui/footer";
@@ -26,6 +27,21 @@ const PRO_FEATURES = [
 ];
 
 export default function PricingPage() {
+  const [upgrading, setUpgrading] = useState(false);
+
+  const handleUpgrade = async () => {
+    setUpgrading(true);
+    try {
+      const res = await fetch("/api/create-checkout", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch {
+      setUpgrading(false);
+    }
+  };
+
   return (
     <>
       <Nav />
@@ -92,12 +108,20 @@ export default function PricingPage() {
 
           {/* CTA */}
           <motion.div
-            className="mt-20 flex justify-center"
+            className="mt-20 flex justify-center gap-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <GhostButton href="/onboarding">Start your trial</GhostButton>
+            <GhostButton href="/onboarding">Start free</GhostButton>
+            <button
+              type="button"
+              onClick={handleUpgrade}
+              disabled={upgrading}
+              className="font-body text-small text-foreground border-b border-foreground pb-0.5 hover:text-accent hover:border-accent transition-colors duration-300 disabled:opacity-30"
+            >
+              {upgrading ? "Redirecting..." : "Upgrade to Pro"} &rarr;
+            </button>
           </motion.div>
         </div>
       </main>

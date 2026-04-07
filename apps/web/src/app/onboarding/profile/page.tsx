@@ -198,11 +198,11 @@ export default function ProfilePage() {
 
       if (user) {
         const { data } = await supabase
-          .from("onboarding_sessions")
+          .from("sessions")
           .upsert({
             user_id: user.id,
             profile_data: profile,
-            current_step: 1,
+            step: 1,
           })
           .select("id")
           .single();

@@ -9,7 +9,8 @@ const STEP_MAP: Record<string, { step: number; name: string }> = {
   "/onboarding/profile": { step: 1, name: "Profile" },
   "/onboarding/ideas": { step: 2, name: "Ideas" },
   "/onboarding/build": { step: 3, name: "Build" },
-  "/onboarding/launch": { step: 4, name: "Launch" },
+  "/onboarding/deploy": { step: 4, name: "Deploy" },
+  "/onboarding/launch": { step: 5, name: "Launch" },
 };
 
 export default function OnboardingLayout({
