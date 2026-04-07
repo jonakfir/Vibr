@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { IdeaCard } from "@/components/ui/idea-card";
 import { GhostButton } from "@/components/ui/ghost-button";
 import { useStore, type Idea } from "@/lib/store";
+import { FormInput } from "@/components/ui/form-input";
 
 interface NameSuggestion {
   name: string;
@@ -21,7 +22,12 @@ export default function IdeasPage() {
   const setSelectedIdea = useStore((s) => s.setSelectedIdea);
   const productName = useStore((s) => s.productName);
   const setProductName = useStore((s) => s.setProductName);
+  const flowMode = useStore((s) => s.flowMode);
+  const setFlowMode = useStore((s) => s.setFlowMode);
+  const projectDescription = useStore((s) => s.projectDescription);
+  const setProjectDescription = useStore((s) => s.setProjectDescription);
 
+  const [modeChosen, setModeChosen] = useState(flowMode !== "generate" ? true : false);
   const [loading, setLoading] = useState(false);
   const [nameSuggestions, setNameSuggestions] = useState<NameSuggestion[]>([]);
   const [loadingNames, setLoadingNames] = useState(false);
@@ -117,6 +123,143 @@ export default function IdeasPage() {
 
   const canContinue = selectedIdea !== null && productName.length > 0;
 
+  /* ── mode chooser ── */
+
+  if (!modeChosen) {
+    return (
+      <div className="max-w-[800px] mx-auto py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+        >
+          <h1 className="font-heading font-light text-title text-foreground mb-4">
+            How do you want to start?
+          </h1>
+          <p className="font-body font-light text-body text-muted mb-12">
+            Generate a new idea from scratch, or bring a project you&rsquo;re already working on.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <button
+            type="button"
+            onClick={() => {
+              setFlowMode("generate");
+              setModeChosen(true);
+            }}
+            className="text-left bg-card border border-card-border rounded-[4px] p-8 hover:border-foreground transition-colors duration-300 group"
+          >
+            <p className="font-body text-[10px] uppercase tracking-wide text-muted mb-4">
+              New Idea
+            </p>
+            <h2 className="font-heading font-light text-subtitle text-foreground mb-3">
+              Start fresh
+            </h2>
+            <p className="font-body text-small text-muted">
+              AI generates business ideas tailored to your skills and interests. Pick one, name it, and start building.
+            </p>
+            <p className="font-body text-small text-foreground mt-6 group-hover:text-accent transition-colors duration-300">
+              Generate ideas →
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setFlowMode("import");
+              setModeChosen(true);
+            }}
+            className="text-left bg-card border border-card-border rounded-[4px] p-8 hover:border-foreground transition-colors duration-300 group"
+          >
+            <p className="font-body text-[10px] uppercase tracking-wide text-muted mb-4">
+              Existing Project
+            </p>
+            <h2 className="font-heading font-light text-subtitle text-foreground mb-3">
+              Work on something you have
+            </h2>
+            <p className="font-body text-small text-muted">
+              Bring your existing code, connect to your files, and use the AI IDE to edit, improve, or add features.
+            </p>
+            <p className="font-body text-small text-foreground mt-6 group-hover:text-accent transition-colors duration-300">
+              Import project →
+            </p>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── import mode ── */
+
+  if (flowMode === "import") {
+    const canContinueImport = productName.trim().length > 0;
+
+    return (
+      <div className="max-w-[640px] mx-auto py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+        >
+          <button
+            type="button"
+            onClick={() => setModeChosen(false)}
+            className="font-body text-xs text-muted hover:text-foreground transition-colors duration-300 mb-8"
+          >
+            ← Back
+          </button>
+
+          <h1 className="font-heading font-light text-title text-foreground mb-4">
+            Tell us about your project.
+          </h1>
+          <p className="font-body font-light text-body text-muted mb-12">
+            We&rsquo;ll set up the IDE so you can start editing right away.
+          </p>
+
+          <div className="space-y-8">
+            <div>
+              <label className="font-body text-[10px] uppercase tracking-wide text-muted block mb-2">
+                Project name *
+              </label>
+              <input
+                type="text"
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+                placeholder="My SaaS App"
+                className="w-full bg-transparent font-body text-body text-foreground border-0 border-b border-border focus:border-foreground outline-none py-2 transition-colors duration-300"
+              />
+            </div>
+
+            <div>
+              <label className="font-body text-[10px] uppercase tracking-wide text-muted block mb-2">
+                Description
+              </label>
+              <textarea
+                value={projectDescription}
+                onChange={(e) => setProjectDescription(e.target.value)}
+                placeholder="What does it do? What are you working on? What do you want to add or change?"
+                rows={4}
+                className="w-full bg-transparent font-body text-body text-foreground border-0 border-b border-border focus:border-foreground outline-none py-2 transition-colors duration-300 resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="pt-10">
+            <GhostButton
+              onClick={() => router.push("/onboarding/build")}
+              className={!canContinueImport ? "opacity-30 pointer-events-none" : ""}
+            >
+              Continue to build
+            </GhostButton>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  /* ── generate mode (original flow) ── */
+
   if (loading) {
     return (
       <div className="max-w-[640px] mx-auto py-16 flex items-center justify-center min-h-[60vh]">
@@ -138,6 +281,14 @@ export default function IdeasPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
       >
+        <button
+          type="button"
+          onClick={() => setModeChosen(false)}
+          className="font-body text-xs text-muted hover:text-foreground transition-colors duration-300 mb-8"
+        >
+          ← Back
+        </button>
+
         <h1 className="font-heading font-light text-title text-foreground mb-16">
           Here&rsquo;s what you could build.
         </h1>

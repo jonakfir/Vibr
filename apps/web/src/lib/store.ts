@@ -29,20 +29,24 @@ export interface Profile {
 
 interface OnboardingState {
   currentStep: number;
+  flowMode: "generate" | "import";
   profile: Profile;
   ideas: Idea[];
   selectedIdea: Idea | null;
   productName: string;
+  projectDescription: string;
   prompt: string;
   marketers: Marketer[];
   selectedMarketers: Marketer[];
   sessionId: string | null;
 
   setStep: (step: number) => void;
+  setFlowMode: (mode: "generate" | "import") => void;
   setProfile: (profile: Partial<Profile>) => void;
   setIdeas: (ideas: Idea[]) => void;
   setSelectedIdea: (idea: Idea | null) => void;
   setProductName: (name: string) => void;
+  setProjectDescription: (desc: string) => void;
   setPrompt: (prompt: string) => void;
   setMarketers: (marketers: Marketer[]) => void;
   setSelectedMarketers: (marketers: Marketer[]) => void;
@@ -51,6 +55,7 @@ interface OnboardingState {
 
 export const useStore = create<OnboardingState>((set) => ({
   currentStep: 1,
+  flowMode: "generate",
   profile: {
     full_name: "",
     skills: [],
@@ -62,17 +67,20 @@ export const useStore = create<OnboardingState>((set) => ({
   ideas: [],
   selectedIdea: null,
   productName: "",
+  projectDescription: "",
   prompt: "",
   marketers: [],
   selectedMarketers: [],
   sessionId: null,
 
   setStep: (step) => set({ currentStep: step }),
+  setFlowMode: (mode) => set({ flowMode: mode }),
   setProfile: (profile) =>
     set((state) => ({ profile: { ...state.profile, ...profile } })),
   setIdeas: (ideas) => set({ ideas }),
   setSelectedIdea: (idea) => set({ selectedIdea: idea }),
   setProductName: (name) => set({ productName: name }),
+  setProjectDescription: (desc) => set({ projectDescription: desc }),
   setPrompt: (prompt) => set({ prompt }),
   setMarketers: (marketers) => set({ marketers }),
   setSelectedMarketers: (marketers) => set({ selectedMarketers: marketers }),

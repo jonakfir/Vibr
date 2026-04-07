@@ -155,6 +155,8 @@ export default function BuildPage() {
   const router = useRouter();
   const selectedIdea = useStore((s) => s.selectedIdea);
   const productName = useStore((s) => s.productName);
+  const flowMode = useStore((s) => s.flowMode);
+  const projectDescription = useStore((s) => s.projectDescription);
   const prompt = useStore((s) => s.prompt);
   const setPrompt = useStore((s) => s.setPrompt);
 
@@ -201,7 +203,14 @@ export default function BuildPage() {
   }, [selectedIdea, productName, setPrompt]);
 
   useEffect(() => {
-    if (!prompt) generatePrompt();
+    if (flowMode === "import") {
+      // For import mode, set a contextual prompt if user provided a description
+      if (!prompt && projectDescription) {
+        setPrompt(`Project: ${productName}\n\nDescription: ${projectDescription}\n\nConnect vibr-local and open your project folder to get started. You can ask the AI to analyze your codebase, add features, fix bugs, or refactor code.`);
+      }
+    } else {
+      if (!prompt) generatePrompt();
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── vibr-local connection ── */
@@ -383,7 +392,7 @@ export default function BuildPage() {
       <div className="w-80 border-r border-border flex flex-col shrink-0">
         <div className="flex-1 overflow-y-auto p-5">
           <p className="font-body text-[10px] uppercase tracking-wide text-muted mb-4">
-            Generated Prompt
+            {flowMode === "import" ? "Project Context" : "Generated Prompt"}
           </p>
 
           {generatingPrompt ? (
@@ -392,7 +401,7 @@ export default function BuildPage() {
             </p>
           ) : (
             <div className="font-mono text-xs text-muted leading-relaxed whitespace-pre-wrap max-h-[280px] overflow-y-auto">
-              {prompt || "No prompt generated yet."}
+              {prompt || (flowMode === "import" ? "Open your project folder on the right to get started." : "No prompt generated yet.")}
             </div>
           )}
 
@@ -489,7 +498,9 @@ export default function BuildPage() {
           {messages.length === 0 && (
             <div className="flex items-center justify-center h-full">
               <p className="font-body text-small text-muted">
-                Start coding by describing what you want to build.
+                {flowMode === "import"
+                  ? "Describe what you want to add, change, or fix in your project."
+                  : "Start coding by describing what you want to build."}
               </p>
             </div>
           )}
