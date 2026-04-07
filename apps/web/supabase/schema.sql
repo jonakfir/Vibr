@@ -13,6 +13,9 @@ create table public.profiles (
   interests text[],
   resume_url text,
   linkedin_url text,
+  subscription_status text default 'free' not null,
+  stripe_customer_id text,
+  stripe_subscription_id text,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
 );

@@ -19,6 +19,9 @@ export interface Database {
           interests: string[] | null;
           resume_url: string | null;
           linkedin_url: string | null;
+          subscription_status: string;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +34,9 @@ export interface Database {
           interests?: string[] | null;
           resume_url?: string | null;
           linkedin_url?: string | null;
+          subscription_status?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -43,6 +49,9 @@ export interface Database {
           interests?: string[] | null;
           resume_url?: string | null;
           linkedin_url?: string | null;
+          subscription_status?: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
