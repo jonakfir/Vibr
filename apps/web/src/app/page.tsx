@@ -22,6 +22,9 @@ export const metadata: Metadata = {
     "local AI coding tool",
     "vibr-local",
   ],
+  alternates: {
+    canonical: "https://vibr-ai.com",
+  },
 };
 
 export default function Home() {

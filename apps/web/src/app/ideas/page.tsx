@@ -4,11 +4,14 @@ import { Footer } from "@/components/ui/footer";
 import { GhostButton } from "@/components/ui/ghost-button";
 
 export const metadata: Metadata = {
-  title: "AI Startup Idea Generator Based on Your Skills | Vibr",
+  title: "AI Startup Idea Generator Based on Your Skills",
   description:
     "Generate personalized AI business ideas based on your skills, interests, and experience. Vibr's AI startup idea generator delivers tailored SaaS concepts with market analysis so you can start building today.",
+  alternates: {
+    canonical: "https://vibr-ai.com/ideas",
+  },
   openGraph: {
-    title: "AI Startup Idea Generator Based on Your Skills | Vibr",
+    title: "AI Startup Idea Generator Based on Your Skills",
     description:
       "Generate personalized AI business ideas based on your skills, interests, and experience. Vibr's AI startup idea generator delivers tailored SaaS concepts with market analysis.",
     type: "website",

@@ -4,11 +4,14 @@ import { Footer } from "@/components/ui/footer";
 import { GhostButton } from "@/components/ui/ghost-button";
 
 export const metadata: Metadata = {
-  title: "Local AI Coding Tool with BYOK — vibr-local | Vibr",
+  title: "Local AI Coding Tool with BYOK — vibr-local",
   description:
     "vibr-local is a local AI coding tool that connects your browser IDE to local files. Bring your own API key for Claude, OpenAI, or Gemini. Terminal, file browser, git ops — all in the browser.",
+  alternates: {
+    canonical: "https://vibr-ai.com/local-ide",
+  },
   openGraph: {
-    title: "Local AI Coding Tool with BYOK — vibr-local | Vibr",
+    title: "Local AI Coding Tool with BYOK — vibr-local",
     description:
       "vibr-local connects your browser IDE to local files. BYOK for Claude, OpenAI, or Gemini. Terminal, file browser, git ops — a Claude Code alternative in the browser.",
     type: "website",

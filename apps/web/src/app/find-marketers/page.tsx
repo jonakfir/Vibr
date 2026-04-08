@@ -4,11 +4,14 @@ import { Footer } from "@/components/ui/footer";
 import { GhostButton } from "@/components/ui/ghost-button";
 
 export const metadata: Metadata = {
-  title: "AI Tool to Find Marketers for Your Product | Vibr",
+  title: "AI Tool to Find Marketers for Your Product",
   description:
     "Vibr scans LinkedIn to find marketers matching your product's sector, ranks them by relevance, and generates personalized cold outreach emails. Find growth marketers for your SaaS startup with AI.",
+  alternates: {
+    canonical: "https://vibr-ai.com/find-marketers",
+  },
   openGraph: {
-    title: "AI Tool to Find Marketers for Your Product | Vibr",
+    title: "AI Tool to Find Marketers for Your Product",
     description:
       "Find growth marketers for your SaaS startup with AI. Vibr scans LinkedIn, ranks marketers by relevance, and generates personalized outreach emails.",
     type: "website",

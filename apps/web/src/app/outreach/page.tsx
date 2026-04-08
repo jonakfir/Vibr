@@ -4,11 +4,14 @@ import { Footer } from "@/components/ui/footer";
 import { GhostButton } from "@/components/ui/ghost-button";
 
 export const metadata: Metadata = {
-  title: "AI Cold Email Generator for Startup Outreach | Vibr",
+  title: "AI Cold Email Generator for Startup Outreach",
   description:
     "Generate personalized cold emails for startup outreach with AI. Vibr finds relevant marketers, writes tailored emails with subject lines, and lets you edit and send — powered by Firstline.",
+  alternates: {
+    canonical: "https://vibr-ai.com/outreach",
+  },
   openGraph: {
-    title: "AI Cold Email Generator for Startup Outreach | Vibr",
+    title: "AI Cold Email Generator for Startup Outreach",
     description:
       "Generate personalized cold emails for startup outreach with AI. Vibr finds marketers, writes tailored emails, and lets you send — all in one flow.",
     type: "website",
