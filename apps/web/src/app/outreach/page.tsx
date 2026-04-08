@@ -27,7 +27,7 @@ export default function OutreachPage() {
       <section className="pt-40 pb-24 px-6">
         <div className="max-w-[900px] mx-auto text-center">
           <h1 className="font-heading font-light text-5xl md:text-7xl text-foreground leading-tight">
-            AI Cold Email Generator
+            AI Cold Email Generator{" "}
             <br />
             for Startup Outreach
           </h1>
@@ -118,6 +118,18 @@ export default function OutreachPage() {
           </p>
           <div className="mt-8">
             <GhostButton href="/onboarding">Start building</GhostButton>
+          </div>
+        </div>
+      </section>
+
+      {/* Internal links */}
+      <section className="py-16 px-6 border-t border-[#222]">
+        <div className="max-w-[900px] mx-auto">
+          <p className="font-body text-xs text-muted uppercase tracking-[0.2em] mb-6">Explore more</p>
+          <div className="flex flex-wrap gap-8">
+            <a href="/ideas" className="font-body text-sm text-foreground hover:underline">AI Idea Generator</a>
+            <a href="/local-ide" className="font-body text-sm text-foreground hover:underline">Local AI IDE</a>
+            <a href="/find-marketers" className="font-body text-sm text-foreground hover:underline">Find Marketers</a>
           </div>
         </div>
       </section>

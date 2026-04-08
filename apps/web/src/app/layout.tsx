@@ -54,6 +54,38 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([
+              {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                "name": "Vibr",
+                "url": "https://vibr-ai.com",
+                "logo": "https://vibr-ai.com/logo.svg",
+                "description": "AI-powered platform that generates startup ideas, provides a local coding IDE with BYOK, and matches you with marketers to grow your product.",
+                "sameAs": []
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "Vibr",
+                "applicationCategory": "DeveloperApplication",
+                "operatingSystem": "Web, macOS, Linux, Windows",
+                "offers": {
+                  "@type": "Offer",
+                  "price": "49",
+                  "priceCurrency": "USD",
+                  "priceValidUntil": "2027-12-31"
+                },
+                "description": "AI startup idea generator, BYOK coding IDE connected to local files, and marketer matching platform for solo builders."
+              }
+            ])
+          }}
+        />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );
