@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Nav } from '@/components/ui/nav';
 import { Footer } from '@/components/ui/footer';
 import { Hero } from '@/components/landing/hero';
@@ -8,6 +9,20 @@ import { CodingInterface } from '@/components/landing/coding-interface';
 import { MarketerSection } from '@/components/landing/marketer-section';
 import { PricingSection } from '@/components/landing/pricing-section';
 import { Closing } from '@/components/landing/closing';
+
+export const metadata: Metadata = {
+  title: "Vibr — Build it. Ship it. Find someone to sell it.",
+  keywords: [
+    "AI startup idea generator",
+    "vibe coding tool",
+    "AI business ideas",
+    "BYOK AI coding",
+    "find marketers for SaaS",
+    "AI cold email generator",
+    "local AI coding tool",
+    "vibr-local",
+  ],
+};
 
 export default function Home() {
   return (
