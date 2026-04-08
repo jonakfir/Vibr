@@ -4,26 +4,16 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Nav } from "@/components/ui/nav";
 import { Footer } from "@/components/ui/footer";
-import { GhostButton } from "@/components/ui/ghost-button";
-
-const FREE_FEATURES = [
-  "3 idea generations per month",
-  "Basic profile setup",
-  "Community access",
-  "Single session at a time",
-  "No marketer matching",
-  "No outreach tools",
-];
 
 const PRO_FEATURES = [
-  "Unlimited idea generations",
+  "Unlimited AI-generated business ideas",
   "AI-powered vibe coding with your own API keys",
   "Marketer matching and cold email outreach",
-  "Full vibr-local access",
+  "Full vibr-local access — local files, terminal, git",
   "Domain availability checks",
+  "One-click Vercel deploy",
   "Unlimited concurrent sessions",
   "Priority support",
-  "7-day free trial, no card required",
 ];
 
 export default function PricingPage() {
@@ -46,7 +36,7 @@ export default function PricingPage() {
     <>
       <Nav />
       <main className="min-h-screen bg-background py-32">
-        <div className="max-w-[960px] mx-auto px-6">
+        <div className="max-w-[700px] mx-auto px-6">
           {/* Price */}
           <motion.div
             className="text-center"
@@ -62,65 +52,44 @@ export default function PricingPage() {
                 /mo
               </span>
             </div>
+            <p className="mt-6 font-body text-body text-muted">
+              Everything you need to go from idea to launched product.
+            </p>
           </motion.div>
 
-          {/* Comparison */}
+          {/* Features */}
           <motion.div
-            className="mt-24 grid grid-cols-2 gap-0"
+            className="mt-20"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
           >
-            {/* Free */}
-            <div className="pr-16 border-r border-border">
-              <h2 className="font-heading font-light text-subtitle text-foreground mb-8">
-                Free
-              </h2>
-              <div className="space-y-3">
-                {FREE_FEATURES.map((feature) => (
-                  <p
-                    key={feature}
-                    className="font-body text-body text-muted leading-relaxed"
-                  >
-                    {feature}
-                  </p>
-                ))}
-              </div>
-            </div>
-
-            {/* Pro */}
-            <div className="pl-16">
-              <h2 className="font-heading font-light text-subtitle text-foreground mb-8">
-                Pro
-              </h2>
-              <div className="space-y-3">
-                {PRO_FEATURES.map((feature) => (
-                  <p
-                    key={feature}
-                    className="font-body text-body text-foreground leading-relaxed"
-                  >
-                    {feature}
-                  </p>
-                ))}
-              </div>
+            <div className="space-y-4">
+              {PRO_FEATURES.map((feature) => (
+                <p
+                  key={feature}
+                  className="font-body text-body text-foreground leading-relaxed border-b border-[#222] pb-4"
+                >
+                  {feature}
+                </p>
+              ))}
             </div>
           </motion.div>
 
           {/* CTA */}
           <motion.div
-            className="mt-20 flex justify-center gap-8"
+            className="mt-16 text-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <GhostButton href="/onboarding">Start free</GhostButton>
             <button
               type="button"
               onClick={handleUpgrade}
               disabled={upgrading}
-              className="font-body text-small text-foreground border-b border-foreground pb-0.5 hover:text-accent hover:border-accent transition-colors duration-300 disabled:opacity-30"
+              className="font-body text-base text-foreground border-b border-foreground pb-1 hover:text-accent hover:border-accent transition-colors duration-300 disabled:opacity-30"
             >
-              {upgrading ? "Redirecting..." : "Upgrade to Pro"} &rarr;
+              {upgrading ? "Redirecting..." : "Get started"} &rarr;
             </button>
           </motion.div>
         </div>

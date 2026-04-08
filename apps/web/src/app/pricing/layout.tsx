@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Vibr pricing plans. Start free with 3 idea generations per month, or upgrade to Pro for $49/mo with unlimited ideas, AI coding, marketer matching, and cold email outreach.",
+    "Vibr Pro — $49/mo. Unlimited AI idea generation, BYOK coding IDE, marketer matching, cold email outreach, one-click deploy, and full vibr-local access.",
   alternates: {
     canonical: "https://vibr-ai.com/pricing",
   },

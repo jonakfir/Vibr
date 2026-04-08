@@ -52,15 +52,11 @@ export function PaywallModal({ open, onClose, feature, used, limit }: PaywallMod
             </div>
 
             <h2 className="font-heading font-light text-subtitle text-foreground mb-4">
-              You&rsquo;ve reached the limit.
+              This feature requires a subscription.
             </h2>
 
-            <p className="font-body text-body text-muted mb-2">
-              {used} of {limit} free {feature.replace(/_/g, " ")}s used this month.
-            </p>
-
-            <p className="font-body text-small text-muted mb-10">
-              Upgrade to Pro for unlimited access to all features including the IDE, deployment, and marketer outreach.
+            <p className="font-body text-body text-muted mb-10">
+              Subscribe to Vibr Pro to unlock {feature.replace(/_/g, " ")}, the AI coding IDE, deployment, marketer matching, and cold email outreach.
             </p>
 
             <div className="flex items-baseline gap-2 mb-8">

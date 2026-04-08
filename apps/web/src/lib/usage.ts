@@ -2,9 +2,9 @@ import { isAdmin, hasProAccess } from "@/lib/auth";
 import { createClient } from "@supabase/supabase-js";
 
 export const FREE_LIMITS: Record<string, number> = {
-  idea_generation: 3,
-  domain_check: 5,
-  marketer_scan: 1,
+  idea_generation: 0,
+  domain_check: 0,
+  marketer_scan: 0,
 };
 
 function getServiceClient() {
