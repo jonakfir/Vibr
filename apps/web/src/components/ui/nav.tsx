@@ -56,10 +56,10 @@ export function Nav() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-[1200px] mx-auto px-6 h-20 flex items-center justify-between">
         <Link
           href="/"
-          className="font-heading font-light text-[20px] text-foreground"
+          className="font-heading font-light text-[28px] text-foreground"
         >
           Vibr
         </Link>

@@ -4,7 +4,11 @@ import { motion } from "framer-motion";
 import { GhostButton } from "@/components/ui/ghost-button";
 import { ParticleField } from "./particle-field";
 
-const lines = ["Build it.", "Ship it.", "Find someone", "to sell it."];
+const lines = [
+  { number: "01", text: "Build it." },
+  { number: "02", text: "Ship it." },
+  { number: "03", text: "Find someone to sell it." },
+];
 
 const lineVariant = {
   hidden: { opacity: 0, y: 20 },
@@ -35,7 +39,7 @@ export function Hero() {
     <section className="relative min-h-screen flex items-center">
       <ParticleField />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-6 w-full flex flex-col justify-center">
+      <div className="relative z-10 max-w-[1400px] mx-auto px-6 w-full flex flex-col items-center justify-center text-center">
         <h1 className="font-heading font-light text-display md:text-hero-lg text-foreground">
           {lines.map((line, i) => (
             <motion.span
@@ -46,7 +50,10 @@ export function Hero() {
               animate="visible"
               variants={lineVariant}
             >
-              {line}
+              <span className="font-body text-[14px] text-muted/50 tracking-widest uppercase mr-4 align-middle">
+                {line.number}
+              </span>
+              {line.text}
             </motion.span>
           ))}
         </h1>
@@ -57,8 +64,8 @@ export function Hero() {
           animate="visible"
           variants={fadeIn(totalHeadlineDelay)}
         >
-          Vibr turns your skills into a product, a prompt, and a marketer who
-          will grow it.
+          Vibr turns your skills into a product, a prompt, and finds a marketer
+          who will grow it.
         </motion.p>
 
         <motion.div

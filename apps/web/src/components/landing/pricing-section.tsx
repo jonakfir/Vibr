@@ -23,7 +23,6 @@ export function PricingSection() {
             Everything you need. Unlimited idea generations, AI-powered vibe
             coding with your own API keys, marketer matching and cold email
             outreach, full vibr-local access, and domain availability checks.
-            Start with a 7-day free trial — no card required.
           </p>
         </SectionReveal>
 

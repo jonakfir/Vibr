@@ -31,14 +31,7 @@ export function GhostButton({
       <span className="inline-block transition-transform duration-300 group-hover:translate-x-0.5">
         &rarr;
       </span>
-      <motion.span
-        className="absolute bottom-0 left-0 h-px bg-foreground"
-        variants={{
-          rest: { width: "0%" },
-          hover: { width: "100%" },
-        }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-      />
+      {/* no underline */}
     </motion.span>
   );
 

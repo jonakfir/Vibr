@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { SectionReveal } from "@/components/ui/section-reveal";
 import { IdeaCard } from "@/components/ui/idea-card";
 
@@ -63,10 +64,13 @@ export function IdeasShowcase() {
                 i > 0 ? "md:-ml-6" : ""
               }`}
             >
-              <div
+              <motion.div
                 style={{
                   transform: `rotate(${rotations[i]})`,
                 }}
+                whileHover={{ scale: 1.06, zIndex: 10, rotate: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="relative"
               >
                 <IdeaCard
                   sector={idea.sector}
@@ -76,7 +80,7 @@ export function IdeasShowcase() {
                   onSelect={() => setSelected(i)}
                   selected={selected === i}
                 />
-              </div>
+              </motion.div>
             </SectionReveal>
           ))}
         </div>

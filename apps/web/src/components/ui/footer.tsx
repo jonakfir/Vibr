@@ -21,10 +21,10 @@ export function Footer() {
             </Link>
             <p className="font-body text-small text-muted mt-4">
               <a
-                href="mailto:hello@vibr.ai"
+                href="mailto:contact@vibr.ai"
                 className="hover:text-foreground transition-colors duration-300"
               >
-                hello@vibr.ai
+                contact@vibr.ai
               </a>
             </p>
           </div>
