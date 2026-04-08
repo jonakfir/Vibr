@@ -8,8 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import { GhostButton } from "./ghost-button";
 
 const NAV_LINKS = [
+  { label: "Ideas", href: "/ideas" },
+  { label: "IDE", href: "/local-ide" },
+  { label: "Marketers", href: "/find-marketers" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Download", href: "/download" },
 ];
 
 export function Nav() {

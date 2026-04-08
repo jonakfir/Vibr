@@ -1,10 +1,12 @@
 import Link from "next/link";
 
 const FOOTER_LINKS = [
-  { label: "Product", href: "/" },
+  { label: "AI Idea Generator", href: "/ideas" },
+  { label: "Local AI IDE", href: "/local-ide" },
+  { label: "Find Marketers", href: "/find-marketers" },
+  { label: "AI Outreach", href: "/outreach" },
   { label: "Pricing", href: "/pricing" },
   { label: "Download", href: "/download" },
-  { label: "Sign in", href: "/sign-in" },
 ];
 
 export function Footer() {
@@ -29,7 +31,7 @@ export function Footer() {
             </p>
           </div>
 
-          <nav className="grid grid-cols-2 gap-x-16 gap-y-3">
+          <nav className="grid grid-cols-3 gap-x-12 gap-y-3">
             {FOOTER_LINKS.map((link) => (
               <Link
                 key={link.href}
