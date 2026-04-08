@@ -1,22 +1,50 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { Nav } from "@/components/ui/nav";
 import { Footer } from "@/components/ui/footer";
 import { GhostButton } from "@/components/ui/ghost-button";
 
-export const metadata: Metadata = {
-  title: "AI Cold Email Generator for Startup Outreach",
-  description:
-    "Generate personalized cold emails for startup outreach with AI. Vibr finds relevant marketers, writes tailored emails with subject lines, and lets you edit and send — powered by Firstline.",
-  alternates: {
-    canonical: "https://vibr-ai.com/outreach",
+function Section({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+  return (
+    <motion.section
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className={className}
+    >
+      {children}
+    </motion.section>
+  );
+}
+
+const outreachSteps = [
+  {
+    num: "01",
+    title: "Pick a match",
+    desc: "Select a marketer or journalist from your AI-generated results.",
   },
-  openGraph: {
-    title: "AI Cold Email Generator for Startup Outreach",
-    description:
-      "Generate personalized cold emails for startup outreach with AI. Vibr finds marketers, writes tailored emails, and lets you send — all in one flow.",
-    type: "website",
+  {
+    num: "02",
+    title: "AI writes the email",
+    desc: "Vibr reads their recent posts and crafts a message that references their actual work.",
   },
-};
+  {
+    num: "03",
+    title: "Review and send",
+    desc: "Edit the draft if you want, then send it straight from the app.",
+  },
+];
 
 export default function OutreachPage() {
   return (
@@ -24,115 +52,177 @@ export default function OutreachPage() {
       <Nav />
 
       {/* Hero */}
-      <section className="pt-40 pb-24 px-6">
-        <div className="max-w-[900px] mx-auto text-center">
-          <h1 className="font-heading font-light text-5xl md:text-7xl text-foreground leading-tight">
-            AI Cold Email Generator{" "}
-            <br />
-            for Startup Outreach
-          </h1>
-          <p className="mt-8 font-body font-light text-lg text-muted max-w-[600px] mx-auto">
-            Vibr finds the right marketers for your product, writes personalized
-            cold emails, and lets you send them — all from one screen. No
-            templates. Every email is unique.
-          </p>
-          <div className="mt-8">
-            <GhostButton href="/onboarding">
-              Start your outreach
-            </GhostButton>
+      <Section className="max-w-4xl mx-auto px-6 pt-32 pb-20 text-center">
+        <h1 className="font-heading font-light text-[clamp(2.5rem,5vw,4rem)] leading-[1.1] text-foreground mb-6">
+          Cold Emails That
+          <br />
+          Don&apos;t Sound Cold
+        </h1>
+        <p className="font-body text-base text-muted max-w-xl mx-auto leading-relaxed">
+          Vibr reads your prospect&apos;s latest posts, articles, and activity,
+          then writes a personalized email that references their real work. No
+          templates. No &ldquo;I hope this finds you well.&rdquo;
+        </p>
+        <div className="mt-10">
+          <GhostButton href="/login">Write your first email</GhostButton>
+        </div>
+      </Section>
+
+      {/* Mockup: email preview */}
+      <Section className="max-w-3xl mx-auto px-6 pb-28">
+        <motion.div
+          className="bg-[#111] border border-[#222] rounded-[4px] overflow-hidden transition-shadow duration-500 hover:shadow-[0_0_40px_rgba(124,58,237,0.08)]"
+          animate={{ y: [0, -8, 0] }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          whileHover={{ scale: 1.02 }}
+        >
+          <div className="px-6 py-3 border-b border-[#222]">
+            <p className="text-xs text-muted">
+              To: sarah.chen@techcrunch.com
+            </p>
+            <p className="text-sm text-foreground mt-1 font-medium">
+              Your DevTools coverage + a new AI code review tool
+            </p>
           </div>
-        </div>
-      </section>
+          <div className="px-6 py-4 space-y-3">
+            <p className="text-sm text-muted">Hi Sarah,</p>
+            <p className="text-sm text-muted">
+              I noticed your recent piece on developer productivity
+              tools&nbsp;&mdash; specifically the section on AI-assisted code
+              review...
+            </p>
+            <p className="text-sm text-muted">
+              We just launched CodeReview Bot, which does exactly what you
+              described as the &ldquo;missing piece&rdquo;...
+            </p>
+            <p className="text-sm text-muted">
+              Would love 15 minutes to show you a demo. No pressure.
+            </p>
+            <p className="text-sm text-foreground mt-4">&mdash; Jon</p>
+          </div>
+        </motion.div>
+      </Section>
 
-      {/* The flow */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
-            AI Outreach Emails That Actually Get Replies
-          </h2>
-          <p className="mt-6 font-body font-light text-base text-muted leading-relaxed">
-            Generic cold emails get ignored. Vibr writes each email from
-            scratch using the recipient&apos;s LinkedIn profile, past work, and
-            industry context. The result reads like something a human spent
-            twenty minutes composing — because the AI has real data to work
-            with, not just a mail-merge template.
-          </p>
-          <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
-            Every email includes a compelling subject line, a personalized
-            opening that references the marketer&apos;s background, a concise pitch
-            for your product, and a low-friction call to action.
-          </p>
+      {/* The Outreach Flow */}
+      <Section className="max-w-4xl mx-auto px-6 pb-28">
+        <h2 className="font-heading font-light text-[clamp(1.8rem,3.5vw,2.8rem)] text-foreground mb-14 text-center">
+          The Outreach Flow
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {outreachSteps.map((s, i) => (
+            <motion.div
+              key={s.num}
+              className="bg-[#111] border border-[#222] rounded-[4px] p-6"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{
+                duration: 0.8,
+                ease: "easeOut",
+                delay: i * 0.15,
+              }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <span className="font-heading text-5xl text-foreground/10">
+                {s.num}
+              </span>
+              <h3 className="font-heading text-xl text-foreground mt-4 mb-2">
+                {s.title}
+              </h3>
+              <p className="text-sm text-muted leading-relaxed">{s.desc}</p>
+            </motion.div>
+          ))}
         </div>
-      </section>
+      </Section>
 
-      {/* How it works */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
-            Automated Cold Email Workflow for SaaS Founders
-          </h2>
-          <p className="mt-6 font-body font-light text-base text-muted leading-relaxed">
-            The workflow is simple. First, Vibr identifies marketers who match
-            your product&apos;s sector using AI-powered LinkedIn scanning. Then it
-            generates a personalized cold email for each match. You review each
-            draft in an inline editor — tweak the tone, adjust the ask, or send
-            as-is.
-          </p>
-          <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
-            The entire pipeline runs in your browser. No CSV exports, no
-            third-party sequencing tools, no context switching. From discovery to
-            sent email in a single session.
-          </p>
-        </div>
-      </section>
+      {/* Why It Works — generic vs personalized */}
+      <Section className="max-w-4xl mx-auto px-6 pb-28">
+        <h2 className="font-heading font-light text-[clamp(1.8rem,3.5vw,2.8rem)] text-foreground mb-14 text-center">
+          Why It Works
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Generic email */}
+          <motion.div
+            className="bg-[#111] border border-[#222] rounded-[4px] p-6 opacity-60"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 0.6, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            whileHover={{ scale: 1.02 }}
+          >
+            <p className="text-xs text-muted uppercase tracking-wider mb-4">
+              Generic template
+            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-muted">
+                Hi &#123;name&#125;,
+              </p>
+              <p className="text-sm text-muted">
+                I wanted to reach out because I think you&apos;d be interested
+                in our product. We help companies grow faster with AI. Would you
+                be open to a quick call?
+              </p>
+              <p className="text-sm text-muted">&mdash; Sent to 500 people</p>
+            </div>
+          </motion.div>
 
-      {/* Powered by Firstline */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
-            Startup Outreach Tool Powered by Firstline
-          </h2>
-          <p className="mt-6 font-body font-light text-base text-muted leading-relaxed">
-            Under the hood, Vibr&apos;s outreach engine is powered by Firstline — a
-            personalization layer that analyzes each recipient&apos;s digital
-            footprint to craft opening lines with high reply rates. Firstline
-            ensures that every email feels hand-written, not automated.
-          </p>
-          <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
-            Combined with Vibr&apos;s marketer-matching AI, you get an end-to-end
-            system: find the right people, say the right thing, and start the
-            conversation that turns your product into a business.
-          </p>
+          {/* Vibr email */}
+          <motion.div
+            className="bg-[#111] border border-[#7C3AED]/30 rounded-[4px] p-6"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
+            whileHover={{ scale: 1.02 }}
+          >
+            <p className="text-xs text-[#7C3AED] uppercase tracking-wider mb-4">
+              Vibr-generated
+            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-muted">Hi Sarah,</p>
+              <p className="text-sm text-muted">
+                Your recent breakdown of developer productivity tools caught my
+                eye&nbsp;&mdash; especially the bit about AI code review being
+                the &ldquo;missing piece.&rdquo; We just shipped something that
+                does exactly that...
+              </p>
+              <p className="text-sm text-foreground">
+                &mdash; Sent to 1 person who matters
+              </p>
+            </div>
+          </motion.div>
         </div>
-      </section>
+      </Section>
 
       {/* CTA */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto text-center">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
-            Your First Outreach Campaign in Minutes
-          </h2>
-          <p className="mt-6 font-body font-light text-base text-muted max-w-[520px] mx-auto">
-            Describe your product, let Vibr find the marketers, and send
-            personalized emails today.
-          </p>
-          <div className="mt-8">
-            <GhostButton href="/onboarding">Start building</GhostButton>
-          </div>
-        </div>
-      </section>
+      <Section className="max-w-4xl mx-auto px-6 pb-20 text-center">
+        <h2 className="font-heading font-light text-[clamp(1.8rem,3.5vw,2.8rem)] text-foreground mb-6">
+          Write Emails People Actually Read
+        </h2>
+        <p className="text-sm text-muted max-w-md mx-auto mb-10 leading-relaxed">
+          Every email Vibr writes is built from real context. That&apos;s why
+          they get replies.
+        </p>
+        <GhostButton href="/login">Try it now</GhostButton>
+      </Section>
 
-      {/* Internal links */}
-      <section className="py-16 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <p className="font-body text-xs text-muted uppercase tracking-[0.2em] mb-6">Explore more</p>
-          <div className="flex flex-wrap gap-8">
-            <a href="/ideas" className="font-body text-sm text-foreground hover:underline">AI Idea Generator</a>
-            <a href="/local-ide" className="font-body text-sm text-foreground hover:underline">Local AI IDE</a>
-            <a href="/find-marketers" className="font-body text-sm text-foreground hover:underline">Find Marketers</a>
+      {/* Explore more */}
+      <Section className="max-w-4xl mx-auto px-6 pb-32">
+        <div className="border-t border-[#222] pt-12">
+          <p className="text-xs text-muted uppercase tracking-wider mb-6 text-center">
+            Explore more
+          </p>
+          <div className="flex flex-wrap justify-center gap-8">
+            <GhostButton href="/find-marketers">Find Marketers</GhostButton>
+            <GhostButton href="/ideas">Startup Idea Generator</GhostButton>
+            <GhostButton href="/local-ide">Local AI IDE</GhostButton>
           </div>
         </div>
-      </section>
+      </Section>
 
       <Footer />
     </main>

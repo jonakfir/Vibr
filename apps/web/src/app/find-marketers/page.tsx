@@ -1,22 +1,79 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { Nav } from "@/components/ui/nav";
 import { Footer } from "@/components/ui/footer";
 import { GhostButton } from "@/components/ui/ghost-button";
 
-export const metadata: Metadata = {
-  title: "AI Tool to Find Marketers for Your Product",
-  description:
-    "Vibr scans LinkedIn to find marketers matching your product's sector, ranks them by relevance, and generates personalized cold outreach emails. Find growth marketers for your SaaS startup with AI.",
-  alternates: {
-    canonical: "https://vibr-ai.com/find-marketers",
+function Section({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+  return (
+    <motion.section
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className={className}
+    >
+      {children}
+    </motion.section>
+  );
+}
+
+const mockMarketers = [
+  {
+    name: "Sarah Chen",
+    role: "Growth Lead @ TechCrunch",
+    match: 94,
+    tags: "SaaS, Developer Tools, B2B Growth",
   },
-  openGraph: {
-    title: "AI Tool to Find Marketers for Your Product",
-    description:
-      "Find growth marketers for your SaaS startup with AI. Vibr scans LinkedIn, ranks marketers by relevance, and generates personalized outreach emails.",
-    type: "website",
+  {
+    name: "Marcus Rivera",
+    role: "Content Strategist @ Product Hunt",
+    match: 87,
+    tags: "Product Launches, Indie Hackers, Startups",
   },
-};
+  {
+    name: "Leila Osman",
+    role: "Tech Journalist @ The Verge",
+    match: 82,
+    tags: "AI, Consumer Tech, Deep Dives",
+  },
+];
+
+const steps = [
+  {
+    num: "01",
+    title: "Describe your product",
+    desc: "Tell Vibr what you built, who it&apos;s for, and what makes it different.",
+  },
+  {
+    num: "02",
+    title: "AI scans LinkedIn profiles",
+    desc: "Our model searches thousands of profiles for people who cover or promote products like yours.",
+  },
+  {
+    num: "03",
+    title: "Ranked by relevance",
+    desc: "Each result comes with a match score so you know exactly who to contact first.",
+  },
+];
+
+const qualities = [
+  "They&apos;ve written about or promoted products in your space before",
+  "Their audience overlaps with your target customers",
+  "They&apos;re actively posting and engaging, not dormant accounts",
+  "Their tone and style align with your brand",
+  "They have a track record of driving real traffic, not just vanity metrics",
+];
 
 export default function FindMarketersPage() {
   return (
@@ -24,113 +81,156 @@ export default function FindMarketersPage() {
       <Nav />
 
       {/* Hero */}
-      <section className="pt-40 pb-24 px-6">
-        <div className="max-w-[900px] mx-auto text-center">
-          <h1 className="font-heading font-light text-5xl md:text-7xl text-foreground leading-tight">
-            AI Tool to Find Marketers{" "}
-            <br />
-            for Your Product
-          </h1>
-          <p className="mt-8 font-body font-light text-lg text-muted max-w-[600px] mx-auto">
-            You built the product. Now you need someone to grow it. Vibr uses AI
-            to find marketers who already understand your niche and ranks them by
-            how well they fit.
-          </p>
-          <div className="mt-8">
-            <GhostButton href="/onboarding">
-              Find your marketer
-            </GhostButton>
-          </div>
+      <Section className="max-w-4xl mx-auto px-6 pt-32 pb-20 text-center">
+        <h1 className="font-heading font-light text-[clamp(2.5rem,5vw,4rem)] leading-[1.1] text-foreground mb-6">
+          Find the People Who Will
+          <br />
+          Sell It For You
+        </h1>
+        <p className="font-body text-base text-muted max-w-xl mx-auto leading-relaxed">
+          Vibr uses AI to scan LinkedIn and match your product with marketers,
+          journalists, and influencers who already care about your space. No
+          guessing, no cold lists&nbsp;&mdash; just ranked results.
+        </p>
+        <div className="mt-10">
+          <GhostButton href="/login">Start matching</GhostButton>
         </div>
-      </section>
+      </Section>
 
-      {/* How it works */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
-            AI Marketer Matching Powered by LinkedIn Data
-          </h2>
-          <p className="mt-6 font-body font-light text-base text-muted leading-relaxed">
-            Vibr takes your product description, target audience, and sector,
-            then scans LinkedIn for marketers whose experience aligns with your
-            space. It looks at past roles, industries, content they have
-            published, and the types of products they have grown before.
-          </p>
-          <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
-            Each candidate is scored on relevance so you spend your time talking
-            to people who are most likely to say yes — not cold-emailing
-            hundreds of strangers.
-          </p>
+      {/* Mockup: marketer cards */}
+      <Section className="max-w-5xl mx-auto px-6 pb-28">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {mockMarketers.map((m, i) => (
+            <motion.div
+              key={m.name}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{
+                duration: 0.8,
+                ease: "easeOut",
+                delay: i * 0.15,
+              }}
+            >
+              <motion.div
+                className="bg-[#111] border border-[#222] rounded-[4px] p-6 cursor-default"
+                animate={{ y: [0, -8, 0] }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: i * 0.5,
+                }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-[#222]" />
+                  <div>
+                    <p className="font-heading text-lg text-foreground">
+                      {m.name}
+                    </p>
+                    <p className="text-xs text-muted">{m.role}</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-baseline gap-2">
+                  <span className="font-heading text-3xl text-foreground">
+                    {m.match}
+                  </span>
+                  <span className="text-xs text-muted uppercase tracking-wider">
+                    % match
+                  </span>
+                </div>
+                <p className="text-xs text-muted mt-3">{m.tags}</p>
+              </motion.div>
+            </motion.div>
+          ))}
         </div>
-      </section>
+      </Section>
 
-      {/* Ranking */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
-            Find Growth Marketers for Your SaaS Startup
-          </h2>
-          <p className="mt-6 font-body font-light text-base text-muted leading-relaxed">
-            Whether you are launching a developer tool, a B2B platform, or a
-            consumer app, Vibr surfaces marketers with track records in your
-            specific vertical. The ranking system weighs sector match, seniority,
-            audience overlap, and recent activity to give you a shortlist you
-            can act on immediately.
-          </p>
-          <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
-            No more guesswork. No more scrolling through LinkedIn for hours. You
-            get a curated list of five to ten marketers, each with a profile
-            summary and a relevance score.
-          </p>
+      {/* How Matching Works */}
+      <Section className="max-w-4xl mx-auto px-6 pb-28">
+        <h2 className="font-heading font-light text-[clamp(1.8rem,3.5vw,2.8rem)] text-foreground mb-14 text-center">
+          How Matching Works
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {steps.map((s, i) => (
+            <motion.div
+              key={s.num}
+              className="bg-[#111] border border-[#222] rounded-[4px] p-6"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{
+                duration: 0.8,
+                ease: "easeOut",
+                delay: i * 0.15,
+              }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <span className="font-heading text-5xl text-foreground/10">
+                {s.num}
+              </span>
+              <h3 className="font-heading text-xl text-foreground mt-4 mb-2">
+                {s.title}
+              </h3>
+              <p
+                className="text-sm text-muted leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: s.desc }}
+              />
+            </motion.div>
+          ))}
         </div>
-      </section>
+      </Section>
 
-      {/* Outreach */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
-            Personalized Cold Outreach Emails Generated by AI
-          </h2>
-          <p className="mt-6 font-body font-light text-base text-muted leading-relaxed">
-            Once you pick the marketers you want to reach out to, Vibr drafts a
-            personalized cold email for each one. The email references their
-            background, explains why your product is relevant to their
-            expertise, and proposes a clear next step.
-          </p>
-          <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
-            You review, edit if you want, and send. The entire flow — from
-            finding marketers to sending the first message — takes minutes
-            instead of days.
-          </p>
-        </div>
-      </section>
+      {/* What Makes a Good Match */}
+      <Section className="max-w-3xl mx-auto px-6 pb-28">
+        <h2 className="font-heading font-light text-[clamp(1.8rem,3.5vw,2.8rem)] text-foreground mb-14 text-center">
+          What Makes a Good Match
+        </h2>
+        <ul className="divide-y divide-[#222]">
+          {qualities.map((q, i) => (
+            <motion.li
+              key={i}
+              className="py-5 text-sm text-muted leading-relaxed"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{
+                duration: 0.6,
+                ease: "easeOut",
+                delay: i * 0.1,
+              }}
+              dangerouslySetInnerHTML={{ __html: q }}
+            />
+          ))}
+        </ul>
+      </Section>
 
       {/* CTA */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto text-center">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
-            Stop Searching. Start Reaching Out.
-          </h2>
-          <p className="mt-6 font-body font-light text-base text-muted max-w-[520px] mx-auto">
-            Describe your product and let Vibr find the right people to grow it.
-          </p>
-          <div className="mt-8">
-            <GhostButton href="/onboarding">Start building</GhostButton>
-          </div>
-        </div>
-      </section>
+      <Section className="max-w-4xl mx-auto px-6 pb-20 text-center">
+        <h2 className="font-heading font-light text-[clamp(1.8rem,3.5vw,2.8rem)] text-foreground mb-6">
+          Stop Guessing Who to Reach Out To
+        </h2>
+        <p className="text-sm text-muted max-w-md mx-auto mb-10 leading-relaxed">
+          Let AI find the marketers who are already interested in what
+          you&apos;re building. You focus on the product.
+        </p>
+        <GhostButton href="/login">Find your marketers</GhostButton>
+      </Section>
 
-      {/* Internal links */}
-      <section className="py-16 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <p className="font-body text-xs text-muted uppercase tracking-[0.2em] mb-6">Explore more</p>
-          <div className="flex flex-wrap gap-8">
-            <a href="/ideas" className="font-body text-sm text-foreground hover:underline">AI Idea Generator</a>
-            <a href="/local-ide" className="font-body text-sm text-foreground hover:underline">Local AI IDE</a>
-            <a href="/outreach" className="font-body text-sm text-foreground hover:underline">AI Outreach</a>
+      {/* Explore more */}
+      <Section className="max-w-4xl mx-auto px-6 pb-32">
+        <div className="border-t border-[#222] pt-12">
+          <p className="text-xs text-muted uppercase tracking-wider mb-6 text-center">
+            Explore more
+          </p>
+          <div className="flex flex-wrap justify-center gap-8">
+            <GhostButton href="/outreach">AI Cold Emails</GhostButton>
+            <GhostButton href="/ideas">Startup Idea Generator</GhostButton>
+            <GhostButton href="/local-ide">Local AI IDE</GhostButton>
           </div>
         </div>
-      </section>
+      </Section>
 
       <Footer />
     </main>

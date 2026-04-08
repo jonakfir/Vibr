@@ -1,22 +1,40 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { Nav } from "@/components/ui/nav";
 import { Footer } from "@/components/ui/footer";
 import { GhostButton } from "@/components/ui/ghost-button";
 
-export const metadata: Metadata = {
-  title: "Local AI Coding Tool with BYOK — vibr-local",
-  description:
-    "vibr-local is a local AI coding tool that connects your browser IDE to local files. Bring your own API key for Claude, OpenAI, or Gemini. Terminal, file browser, git ops — all in the browser.",
-  alternates: {
-    canonical: "https://vibr-ai.com/local-ide",
-  },
-  openGraph: {
-    title: "Local AI Coding Tool with BYOK — vibr-local",
-    description:
-      "vibr-local connects your browser IDE to local files. BYOK for Claude, OpenAI, or Gemini. Terminal, file browser, git ops — a Claude Code alternative in the browser.",
-    type: "website",
-  },
-};
+function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+  return (
+    <motion.section
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className={className}
+    >
+      {children}
+    </motion.section>
+  );
+}
+
+const providers = [
+  { name: "Anthropic", tag: "Claude" },
+  { name: "OpenAI", tag: "GPT" },
+  { name: "Gemini", tag: "Google" },
+  { name: "Custom", tag: "Any endpoint" },
+];
+
+const features = [
+  { icon: "\u25B6", title: "Terminal emulation", desc: "Full shell access connected to your local machine" },
+  { icon: "\u25C9", title: "File watcher", desc: "Real-time sync between disk and browser editor" },
+  { icon: "\u2387", title: "Git operations", desc: "Stage, commit, diff, and push without leaving the IDE" },
+  { icon: "\u2750", title: "Folder picker", desc: "Open any project directory from your filesystem" },
+];
 
 export default function LocalIdePage() {
   return (
@@ -25,11 +43,16 @@ export default function LocalIdePage() {
 
       {/* Hero */}
       <section className="pt-40 pb-24 px-6">
-        <div className="max-w-[900px] mx-auto text-center">
+        <motion.div
+          className="max-w-[900px] mx-auto text-center"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
           <h1 className="font-heading font-light text-5xl md:text-7xl text-foreground leading-tight">
-            Local AI Coding Tool{" "}
+            Your Files. Your Model.
             <br />
-            with BYOK
+            Your Build.
           </h1>
           <p className="mt-8 font-body font-light text-lg text-muted max-w-[600px] mx-auto">
             vibr-local is a lightweight CLI that bridges your local filesystem
@@ -37,58 +60,162 @@ export default function LocalIdePage() {
             on your machine.
           </p>
           <div className="mt-8">
-            <GhostButton href="/onboarding">
-              Try vibr-local
-            </GhostButton>
+            <GhostButton href="/onboarding">Try vibr-local</GhostButton>
           </div>
-        </div>
+        </motion.div>
       </section>
 
-      {/* What is vibr-local */}
-      <section className="py-24 px-6 border-t border-[#222]">
-        <div className="max-w-[900px] mx-auto">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
+      {/* IDE Mockup */}
+      <Section className="py-24 px-6 border-t border-[#222]">
+        <div className="max-w-[1000px] mx-auto">
+          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground mb-6">
             A BYOK AI Coding IDE Connected to Your Local Files
           </h2>
-          <p className="mt-6 font-body font-light text-base text-muted leading-relaxed">
+          <p className="font-body font-light text-base text-muted leading-relaxed max-w-[700px] mb-14">
             vibr-local runs a small local server that exposes your project
-            directory to the Vibr browser IDE over a secure tunnel. You get a
-            full code editor, integrated terminal, file browser, and git
-            operations — all rendered in the browser but reading and writing
-            directly to your disk.
+            directory to the Vibr browser IDE over a secure tunnel. Here&apos;s
+            what the workspace looks like.
           </p>
-          <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
-            Bring your own key (BYOK) for Claude, OpenAI, or Gemini. Your API
-            key stays in your browser and is never stored on our servers. You
-            choose the model, you control the cost.
-          </p>
+
+          <motion.div
+            className="bg-[#0a0a0a] border border-[#222] rounded-[4px] overflow-hidden transition-shadow duration-500 hover:shadow-[0_0_40px_rgba(124,58,237,0.08)]"
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {/* Top bar */}
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-[#222]">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#333]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#333]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#333]" />
+              <span className="text-xs text-muted ml-2 font-body">vibr-local</span>
+            </div>
+            {/* 3 panels */}
+            <div className="flex h-[350px]">
+              {/* Left: prompt */}
+              <div className="w-1/4 border-r border-[#222] p-4">
+                <p className="text-xs text-muted uppercase tracking-wider font-body">
+                  Prompt
+                </p>
+                <div className="mt-3 space-y-2">
+                  <div className="h-2 bg-[#1a1a1a] rounded w-full" />
+                  <div className="h-2 bg-[#1a1a1a] rounded w-4/5" />
+                  <div className="h-2 bg-[#1a1a1a] rounded w-3/5" />
+                </div>
+                <div className="mt-6 space-y-2">
+                  <div className="h-2 bg-[#1a1a1a] rounded w-full" />
+                  <div className="h-2 bg-[#1a1a1a] rounded w-2/3" />
+                </div>
+              </div>
+              {/* Center: chat */}
+              <div className="flex-1 border-r border-[#222] p-4">
+                <div className="bg-[#111] rounded p-3 mb-3 max-w-[80%]">
+                  <p className="text-xs text-muted font-body">
+                    Create a Next.js API route for user auth...
+                  </p>
+                </div>
+                <div className="bg-[#0d0d0d] border border-[#222] rounded p-3 max-w-[80%] ml-auto">
+                  <p className="text-xs text-foreground font-body">
+                    Here&apos;s the auth route with JWT validation...
+                  </p>
+                </div>
+                <div className="bg-[#111] rounded p-3 mt-3 max-w-[80%]">
+                  <p className="text-xs text-muted font-body">
+                    Now add rate limiting middleware...
+                  </p>
+                </div>
+                <div className="bg-[#0d0d0d] border border-[#222] rounded p-3 max-w-[80%] ml-auto mt-3">
+                  <p className="text-xs text-foreground font-body">
+                    Added express-rate-limit with a 100 req/15m window...
+                  </p>
+                </div>
+              </div>
+              {/* Right: files */}
+              <div className="w-1/4 p-4">
+                <p className="text-xs text-muted uppercase tracking-wider font-body">
+                  Files
+                </p>
+                <div className="mt-3 space-y-1.5 text-xs text-muted font-body">
+                  <p>&#x1F4C1; src/</p>
+                  <p className="pl-4">&#x1F4C1; app/</p>
+                  <p className="pl-8 text-foreground">page.tsx</p>
+                  <p className="pl-8">layout.tsx</p>
+                  <p className="pl-4">&#x1F4C1; lib/</p>
+                  <p className="pl-8">auth.ts</p>
+                  <p className="pl-8">db.ts</p>
+                  <p className="pl-4">&#x1F4C1; api/</p>
+                  <p className="pl-8 text-foreground">route.ts</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
-      </section>
+      </Section>
+
+      {/* BYOK */}
+      <Section className="py-24 px-6 border-t border-[#222]">
+        <div className="max-w-[900px] mx-auto">
+          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground mb-4">
+            BYOK — Bring Your Own Key
+          </h2>
+          <p className="font-body font-light text-base text-muted leading-relaxed mb-12">
+            Your API key stays in your browser and is never stored on our servers.
+            You choose the model, you control the cost.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {providers.map((p, i) => (
+              <motion.div
+                key={p.name}
+                className="bg-[#111] border border-[#222] rounded-[4px] p-5 text-center"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.5, ease: "easeOut", delay: i * 0.15 }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <p className="font-heading font-light text-xl text-foreground">
+                  {p.name}
+                </p>
+                <p className="font-body text-xs text-muted mt-1">{p.tag}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </Section>
 
       {/* Features */}
-      <section className="py-24 px-6 border-t border-[#222]">
+      <Section className="py-24 px-6 border-t border-[#222]">
         <div className="max-w-[900px] mx-auto">
-          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
+          <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground mb-12">
             Terminal, File Browser, and Git Ops in the Browser
           </h2>
-          <p className="mt-6 font-body font-light text-base text-muted leading-relaxed">
-            The IDE ships with a real terminal emulator connected to your local
-            shell, so you can run build commands, install packages, and execute
-            scripts without switching windows. The file tree mirrors your
-            project directory in real time — create, rename, move, or delete
-            files and see changes reflected instantly.
-          </p>
-          <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
-            Built-in git integration lets you stage, commit, diff, and push
-            without leaving the editor. Combined with AI-assisted code
-            generation, you get a complete vibe coding workflow from a single
-            browser tab.
-          </p>
+          <div className="grid md:grid-cols-2 gap-4">
+            {features.map((feat, i) => (
+              <motion.div
+                key={feat.title}
+                className="flex items-start gap-4 bg-[#111] border border-[#222] rounded-[4px] p-5"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.5, ease: "easeOut", delay: i * 0.15 }}
+                whileHover={{ scale: 1.02 }}
+              >
+                <span className="text-lg text-muted mt-0.5 shrink-0">{feat.icon}</span>
+                <div>
+                  <p className="font-body text-sm text-foreground font-medium">
+                    {feat.title}
+                  </p>
+                  <p className="font-body text-sm text-muted mt-1 font-light leading-relaxed">
+                    {feat.desc}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
-      </section>
+      </Section>
 
       {/* Comparison */}
-      <section className="py-24 px-6 border-t border-[#222]">
+      <Section className="py-24 px-6 border-t border-[#222]">
         <div className="max-w-[900px] mx-auto">
           <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
             Claude Code Alternative That Runs in Your Browser
@@ -102,14 +229,14 @@ export default function LocalIdePage() {
           <p className="mt-4 font-body font-light text-base text-muted leading-relaxed">
             Because everything is local-first, your code never touches our
             servers. The AI calls go straight from your browser to the provider
-            using your key. It is the privacy-friendly way to use AI for
+            using your key. It&apos;s the privacy-friendly way to use AI for
             development.
           </p>
         </div>
-      </section>
+      </Section>
 
       {/* CTA */}
-      <section className="py-24 px-6 border-t border-[#222]">
+      <Section className="py-24 px-6 border-t border-[#222]">
         <div className="max-w-[900px] mx-auto text-center">
           <h2 className="font-heading font-light text-3xl md:text-4xl text-foreground">
             Start Coding Locally with AI
@@ -122,16 +249,33 @@ export default function LocalIdePage() {
             <GhostButton href="/onboarding">Get started</GhostButton>
           </div>
         </div>
-      </section>
+      </Section>
 
       {/* Internal links */}
       <section className="py-16 px-6 border-t border-[#222]">
         <div className="max-w-[900px] mx-auto">
-          <p className="font-body text-xs text-muted uppercase tracking-[0.2em] mb-6">Explore more</p>
+          <p className="font-body text-xs text-muted uppercase tracking-[0.2em] mb-6">
+            Explore more
+          </p>
           <div className="flex flex-wrap gap-8">
-            <a href="/ideas" className="font-body text-sm text-foreground hover:underline">AI Idea Generator</a>
-            <a href="/find-marketers" className="font-body text-sm text-foreground hover:underline">Find Marketers</a>
-            <a href="/outreach" className="font-body text-sm text-foreground hover:underline">AI Outreach</a>
+            <a
+              href="/ideas"
+              className="font-body text-sm text-foreground hover:underline"
+            >
+              AI Idea Generator
+            </a>
+            <a
+              href="/find-marketers"
+              className="font-body text-sm text-foreground hover:underline"
+            >
+              Find Marketers
+            </a>
+            <a
+              href="/outreach"
+              className="font-body text-sm text-foreground hover:underline"
+            >
+              AI Outreach
+            </a>
           </div>
         </div>
       </section>
