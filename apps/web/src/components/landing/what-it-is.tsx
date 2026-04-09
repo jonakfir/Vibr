@@ -1,29 +1,27 @@
 "use client";
 
-import { SectionReveal } from "@/components/ui/section-reveal";
+import { FadeInOnScroll } from "./motion-utils";
 
-export function WhatItIs() {
+export default function WhatItIs() {
   return (
-    <section className="w-full py-32 border-t border-border">
-      <div className="max-w-[1200px] mx-auto px-6 flex flex-col items-center text-center gap-12">
-        <SectionReveal>
-          <h2 className="font-heading font-light text-title md:text-display text-foreground">
+    <section className="w-full py-32 border-t border-white/[0.06]">
+      <div className="max-w-[1200px] mx-auto px-6">
+        <FadeInOnScroll>
+          <h2 className="font-heading font-light text-title text-foreground">
             You have the skills.
             <br />
-            We&rsquo;ll show you what to build.
+            <span className="bg-gradient-to-r from-foreground to-foreground/40 bg-clip-text text-transparent">
+              We&apos;ll show you what to build.
+            </span>
           </h2>
-        </SectionReveal>
-
-        <SectionReveal delay={0.15}>
-          <p className="font-body font-light text-body text-muted max-w-[640px]">
-            Tell us who you are&nbsp;&mdash; your skills, your interests, what
-            excites you. Our AI analyzes your profile and generates business
-            ideas uniquely matched to what you can build. Choose one, and
-            we&rsquo;ll write the perfect prompt to build it with your favorite
-            AI coding tool. Then we&rsquo;ll find the growth marketers who can
-            take it to market.
+        </FadeInOnScroll>
+        <FadeInOnScroll delay={0.15}>
+          <p className="font-body font-light text-body text-muted max-w-[600px] mt-8 leading-relaxed">
+            Tell us who you are — your skills, your interests, what excites you. Our
+            AI analyzes your profile against real market demand and generates business
+            ideas tailored to what you can actually build and sell.
           </p>
-        </SectionReveal>
+        </FadeInOnScroll>
       </div>
     </section>
   );

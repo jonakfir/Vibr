@@ -1,17 +1,23 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: ["./src/**/*.{ts,tsx}"],
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
   theme: {
     extend: {
       colors: {
         background: "#000000",
         foreground: "#F2EFE9",
+        card: {
+          DEFAULT: "#111111",
+          border: "#1E1E1E",
+        },
+        border: "#222222",
         muted: "#8A8580",
         accent: "#7C3AED",
-        border: "#222222",
-        card: "#111111",
-        "card-border": "#1E1E1E",
       },
       fontFamily: {
         heading: ['"Cormorant Garamond"', "serif"],
@@ -19,9 +25,8 @@ const config: Config = {
         mono: ['"JetBrains Mono"', "monospace"],
       },
       fontSize: {
-        "hero-xl": ["140px", { lineHeight: "1" }],
-        "hero-lg": ["120px", { lineHeight: "1" }],
         hero: ["96px", { lineHeight: "1" }],
+        "hero-lg": ["120px", { lineHeight: "1" }],
         display: ["64px", { lineHeight: "1.1" }],
         title: ["48px", { lineHeight: "1.15" }],
         subtitle: ["32px", { lineHeight: "1.2" }],
@@ -32,21 +37,13 @@ const config: Config = {
         nav: ["11px", { lineHeight: "1" }],
       },
       letterSpacing: {
-        wide: "0.2em",
         normal: "0.02em",
-      },
-      keyframes: {
-        fadeIn: {
-          "0%": { opacity: "0", transform: "translateY(20px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
-      },
-      animation: {
-        fadeIn: "fadeIn 0.9s ease-out",
+        wide: "0.2em",
+        wider: "0.05em",
+        widest: "0.1em",
       },
     },
   },
   plugins: [],
 };
-
 export default config;

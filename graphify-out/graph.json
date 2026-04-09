@@ -1,0 +1,406 @@
+{
+  "nodes": [
+    {
+      "id": "layout",
+      "label": "layout.tsx",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/local-ide/layout.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "layout_localidelayout",
+      "label": "LocalIdeLayout()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/local-ide/layout.tsx",
+      "source_location": "L18"
+    },
+    {
+      "id": "page",
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/local-ide/page.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "page_section",
+      "label": "Section()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/local-ide/page.tsx",
+      "source_location": "L9"
+    },
+    {
+      "id": "route",
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/api/generate-names/route.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "route_checkdomainavailability",
+      "label": "checkDomainAvailability()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/api/generate-names/route.ts",
+      "source_location": "L5"
+    },
+    {
+      "id": "route_post",
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/api/generate-names/route.ts",
+      "source_location": "L35"
+    },
+    {
+      "id": "route",
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/api/check-domain/route.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "route_post",
+      "label": "POST()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/api/check-domain/route.ts",
+      "source_location": "L4"
+    },
+    {
+      "id": "layout",
+      "label": "layout.tsx",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/ideas/layout.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "layout_ideaslayout",
+      "label": "IdeasLayout()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/ideas/layout.tsx",
+      "source_location": "L18"
+    },
+    {
+      "id": "page",
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/ideas/page.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "page_section",
+      "label": "Section()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/ideas/page.tsx",
+      "source_location": "L9"
+    },
+    {
+      "id": "layout",
+      "label": "layout.tsx",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/pricing/layout.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "layout_pricinglayout",
+      "label": "PricingLayout()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/pricing/layout.tsx",
+      "source_location": "L12"
+    },
+    {
+      "id": "page",
+      "label": "page.tsx",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/pricing/page.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "page_handleupgrade",
+      "label": "handleUpgrade()",
+      "file_type": "code",
+      "source_file": "apps/web/src/app/pricing/page.tsx",
+      "source_location": "L22"
+    }
+  ],
+  "edges": [
+    {
+      "source": "layout",
+      "target": "next",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/local-ide/layout.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "layout",
+      "target": "layout_localidelayout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/local-ide/layout.tsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/local-ide/page.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "framer_motion",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/local-ide/page.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "nav",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/local-ide/page.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "footer",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/local-ide/page.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "ghost_button",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/local-ide/page.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "page_section",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/local-ide/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "route",
+      "target": "server",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/api/generate-names/route.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "route",
+      "target": "server",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/api/generate-names/route.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "route",
+      "target": "sdk",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/api/generate-names/route.ts",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "route",
+      "target": "route_checkdomainavailability",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/api/generate-names/route.ts",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "route",
+      "target": "route_post",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/api/generate-names/route.ts",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "route",
+      "target": "server",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/api/check-domain/route.ts",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "route",
+      "target": "server",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/api/check-domain/route.ts",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "route",
+      "target": "route_post",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/api/check-domain/route.ts",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "layout",
+      "target": "next",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/ideas/layout.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "layout",
+      "target": "layout_ideaslayout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/ideas/layout.tsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/ideas/page.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "framer_motion",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/ideas/page.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "nav",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/ideas/page.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "footer",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/ideas/page.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "ghost_button",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/ideas/page.tsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "page_section",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/ideas/page.tsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "layout",
+      "target": "next",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/pricing/layout.tsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "layout",
+      "target": "layout_pricinglayout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/pricing/layout.tsx",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/pricing/page.tsx",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "framer_motion",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/pricing/page.tsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "nav",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/pricing/page.tsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "footer",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/pricing/page.tsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "page",
+      "target": "page_handleupgrade",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/web/src/app/pricing/page.tsx",
+      "source_location": "L22",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

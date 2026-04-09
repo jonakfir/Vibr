@@ -1,47 +1,38 @@
-"use client";
-
 import Link from "next/link";
-import { motion } from "framer-motion";
-import clsx from "clsx";
-
-interface GhostButtonProps {
-  children: React.ReactNode;
-  href?: string;
-  onClick?: () => void;
-  className?: string;
-}
 
 export function GhostButton({
-  children,
   href,
+  children,
+  className = "",
   onClick,
-  className,
-}: GhostButtonProps) {
-  const inner = (
-    <motion.span
-      className={clsx(
-        "relative inline-flex items-center gap-1.5 font-body text-foreground text-sm tracking-normal cursor-pointer group",
-        className
-      )}
-      whileHover="hover"
-      initial="rest"
-      animate="rest"
-    >
-      <span>{children}</span>
-      <span className="inline-block transition-transform duration-300 group-hover:translate-x-0.5">
-        &rarr;
-      </span>
-      {/* no underline */}
-    </motion.span>
-  );
-
-  if (href) {
-    return <Link href={href}>{inner}</Link>;
+  ...rest
+}: {
+  href?: string;
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+  [key: string]: any;
+}) {
+  if (onClick && !href) {
+    return (
+      <button
+        onClick={onClick}
+        className={`inline-flex items-center gap-2 px-6 py-2.5 font-body text-sm text-foreground border border-border rounded-full hover:border-foreground transition-colors duration-300 ${className}`}
+        {...rest}
+      >
+        {children}
+      </button>
+    );
   }
-
   return (
-    <button type="button" onClick={onClick}>
-      {inner}
-    </button>
+    <Link
+      href={href || "#"}
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 px-6 py-2.5 font-body text-sm text-foreground border border-border rounded-full hover:border-foreground transition-colors duration-300 ${className}`}
+    >
+      {children}
+    </Link>
   );
 }
+
+export default GhostButton;

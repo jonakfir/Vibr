@@ -2,13 +2,9 @@
 const nextConfig = {
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
+      { protocol: "https", hostname: "ui-avatars.com" },
     ],
   },
-  transpilePackages: ["three"],
 };
 
 export default nextConfig;

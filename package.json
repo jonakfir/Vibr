@@ -7,12 +7,6 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
-    "build": "npm run build --workspace=apps/web",
-    "lint": "npm run lint --workspace=apps/web",
-    "dev:local": "npm run dev --workspace=packages/vibr-local",
-    "build:local": "npm run build --workspace=packages/vibr-local"
-  },
-  "engines": {
-    "node": ">=18"
+    "build": "npm run build --workspace=apps/web"
   }
 }
