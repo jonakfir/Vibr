@@ -14,10 +14,18 @@ export default function AuthPage() {
     setError(null);
     try {
       const supabase = createClient();
+      // If middleware bounced the user here with ?next=/onboarding (or similar),
+      // forward that path onto the callback so they end up where they meant
+      // to go after signing in.
+      const params = new URLSearchParams(window.location.search);
+      const nextParam = params.get("next");
+      const redirectTo = new URL("/auth/callback", window.location.origin);
+      if (nextParam) redirectTo.searchParams.set("next", nextParam);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectTo.toString(),
         },
       });
       if (error) {

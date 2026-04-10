@@ -7,6 +7,19 @@ export const metadata: Metadata = {
   title: "Vibr — Build it. Ship it. Find someone to sell it.",
   description:
     "Vibr turns your skills into a product, a prompt, and finds a marketer who will grow it. AI-powered startup idea generator, local coding IDE with BYOK, and marketer matching.",
+  keywords: [
+    "AI startup idea generator",
+    "vibe coding tool",
+    "AI business ideas",
+    "BYOK AI coding",
+    "find marketers for SaaS",
+    "AI cold email generator",
+    "local AI coding tool",
+    "vibr-local",
+  ],
+  alternates: {
+    canonical: "https://vibr-ai.com",
+  },
 };
 
 export default function RootLayout({

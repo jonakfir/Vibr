@@ -1,4 +1,5 @@
 import Hero from "@/components/landing/hero";
+import ScrollReveal from "@/components/landing/scroll-reveal";
 import WhatItIs from "@/components/landing/what-it-is";
 import StepsSection from "@/components/landing/steps-section";
 import IdeasShowcase from "@/components/landing/ideas-showcase";
@@ -13,6 +14,7 @@ export default function Home() {
     <main className="bg-background min-h-screen">
       <ParticleField />
       <Hero />
+      <ScrollReveal />
       <WhatItIs />
       <StepsSection />
       <IdeasShowcase />
