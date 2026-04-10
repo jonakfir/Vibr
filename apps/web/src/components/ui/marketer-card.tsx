@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import clsx from "clsx";
 
 interface MarketerCardProps {
   name: string;
@@ -22,10 +21,7 @@ export function MarketerCard({
 }: MarketerCardProps) {
   return (
     <motion.div
-      className={clsx(
-        "bg-card border border-card-border rounded-[4px] p-6 flex flex-col items-center text-center cursor-pointer transition-colors duration-300 hover:border-muted",
-        className
-      )}
+      className={`bg-card border border-card-border rounded-[4px] p-6 flex flex-col items-center text-center cursor-pointer transition-colors duration-300 hover:border-muted ${className ?? ""}`}
       whileHover={{ y: -2 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       onClick={onSelect}
