@@ -20,6 +20,7 @@ const emptyProfile: Profile = {
 };
 
 interface StoreState {
+  step: number;
   ideas: any[];
   profile: Profile;
   selectedIdea: any;
@@ -30,6 +31,8 @@ interface StoreState {
   deployUrl: string;
   projectPath: string;
   sessionId: string | null;
+  marketers: any[];
+  setStep: (s: number) => void;
   setProfile: (p: Partial<Profile>) => void;
   setIdeas: (i: any[]) => void;
   setSelectedIdea: (i: any) => void;
@@ -40,10 +43,12 @@ interface StoreState {
   setDeployUrl: (u: string) => void;
   setProjectPath: (p: string) => void;
   setSessionId: (id: string | null) => void;
+  setMarketers: (m: any[]) => void;
   [key: string]: any;
 }
 
 export const useStore = create<StoreState>((set) => ({
+  step: 1,
   ideas: [],
   profile: emptyProfile,
   selectedIdea: null,
@@ -54,6 +59,8 @@ export const useStore = create<StoreState>((set) => ({
   deployUrl: "",
   projectPath: "",
   sessionId: null,
+  marketers: [],
+  setStep: (s) => set({ step: s }),
   setProfile: (p) => set((state) => ({ profile: { ...state.profile, ...p } })),
   setIdeas: (i) => set({ ideas: i }),
   setSelectedIdea: (i) => set({ selectedIdea: i }),
@@ -64,6 +71,7 @@ export const useStore = create<StoreState>((set) => ({
   setDeployUrl: (u) => set({ deployUrl: u }),
   setProjectPath: (p) => set({ projectPath: p }),
   setSessionId: (id) => set({ sessionId: id }),
+  setMarketers: (m) => set({ marketers: m }),
 }));
 
 export default useStore;
