@@ -27,17 +27,17 @@ export function Nav() {
           : "border-transparent"
       }`}
     >
-      <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-heading font-light text-[28px] text-foreground">
+      <div className="max-w-[1400px] mx-auto px-8 py-6 flex items-center justify-between">
+        <Link href="/" className="font-heading font-light text-[44px] leading-none text-foreground tracking-tight">
           Vibr
         </Link>
 
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-10">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300 hidden md:block"
+              className="font-body text-[13px] uppercase tracking-[0.18em] text-muted hover:text-foreground transition-colors duration-300 hidden md:block"
             >
               {link.label}
             </Link>
@@ -45,14 +45,14 @@ export function Nav() {
 
           <Link
             href="/auth"
-            className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300 hidden md:block"
+            className="font-body text-[13px] uppercase tracking-[0.18em] text-muted hover:text-foreground transition-colors duration-300 hidden md:block"
           >
             Sign in
           </Link>
 
           <Link
             href="/onboarding"
-            className="group inline-flex items-center gap-1.5 font-body text-nav uppercase tracking-wide text-foreground hover:text-accent transition-colors duration-300"
+            className="group inline-flex items-center gap-1.5 font-body text-[13px] uppercase tracking-[0.18em] text-foreground hover:text-accent transition-colors duration-300"
           >
             Start building
             <span className="group-hover:translate-x-0.5 transition-transform duration-200">
