@@ -273,7 +273,74 @@ function inlineFormat(line: string): string {
     .replace(/\*(.+?)\*/g, "<em>$1</em>");
 }
 
-function renderMarkdown(text: string) {
+function CodeBlock({
+  lang,
+  path,
+  text,
+  closed,
+  defaultOpen = false,
+}: {
+  lang: string;
+  path: string | null;
+  text: string;
+  closed: boolean;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState<boolean>(defaultOpen || !closed);
+  const lineCount = text.split("\n").length;
+  const label = path || lang || "code";
+
+  return (
+    <div className="my-3 border border-border rounded-md overflow-hidden bg-[#0a0a0a]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 px-3 py-2 bg-[#0d0d0d] hover:bg-[#111] transition-colors"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <ChevronRight
+            className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${
+              open ? "rotate-90" : ""
+            }`}
+          />
+          {path ? (
+            <>
+              <span className="font-body text-[12px] text-muted">Edit</span>
+              <span className="font-mono text-[12px] text-foreground truncate">
+                {path}
+              </span>
+            </>
+          ) : (
+            <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
+              {lang || "code"}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          {!closed ? (
+            <span className="font-mono text-[10px] text-muted/60 animate-pulse">
+              streaming…
+            </span>
+          ) : (
+            <span className="font-mono text-[10px] text-muted/60">
+              {lineCount} line{lineCount === 1 ? "" : "s"}
+            </span>
+          )}
+        </div>
+      </button>
+      {open && (
+        <pre
+          aria-label={label}
+          className="overflow-x-auto px-4 py-3 font-mono text-[12px] leading-[1.55] text-foreground/90 border-t border-border"
+        >
+          <code>{text}</code>
+        </pre>
+      )}
+    </div>
+  );
+}
+
+function renderMarkdown(text: string, defaultOpenCode = false) {
   const parts = parseMarkdown(text);
   return (
     <div className="space-y-2 leading-relaxed">
@@ -289,39 +356,14 @@ function renderMarkdown(text: string) {
           );
         }
         return (
-          <div
+          <CodeBlock
             key={`c-${i}`}
-            className="my-3 border border-border rounded-md overflow-hidden bg-[#0a0a0a]"
-          >
-            <div className="flex items-center justify-between gap-3 px-3 py-1.5 border-b border-border bg-[#0d0d0d]">
-              <div className="flex items-center gap-2 min-w-0">
-                {part.path ? (
-                  <>
-                    <span className="font-mono text-[11px] text-foreground truncate">
-                      {part.path}
-                    </span>
-                    {part.lang && (
-                      <span className="font-mono text-[9px] uppercase tracking-wider text-muted/60 shrink-0">
-                        {part.lang}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-                    {part.lang || "code"}
-                  </span>
-                )}
-              </div>
-              {!part.closed && (
-                <span className="font-mono text-[10px] text-muted/60 animate-pulse shrink-0">
-                  streaming…
-                </span>
-              )}
-            </div>
-            <pre className="overflow-x-auto px-4 py-3 font-mono text-[12px] leading-[1.55] text-foreground/90">
-              <code>{part.text}</code>
-            </pre>
-          </div>
+            lang={part.lang}
+            path={part.path}
+            text={part.text}
+            closed={part.closed}
+            defaultOpen={defaultOpenCode || !part.closed}
+          />
         );
       })}
     </div>
@@ -457,6 +499,7 @@ export default function BuildPage() {
 
   /* center panel */
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messagesHydrated, setMessagesHydrated] = useState(false);
   const [input, setInput] = useState("");
   const [inputPrefilled, setInputPrefilled] = useState(false);
   const [streaming, setStreaming] = useState(false);
@@ -553,6 +596,60 @@ export default function BuildPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  /* ── conversation memory ──
+     Persist the chat under a key derived from the selected idea (so
+     each idea gets its own thread). Hydrate on mount, save after
+     every change. Users expect their conversation to survive refresh
+     and re-visits — that's the whole point of "memory of previous
+     conversations". */
+  const chatKey = `vibr.chat.${selectedIdea?.id ?? productName ?? "default"}`;
+
+  useEffect(() => {
+    if (messagesHydrated) return;
+    try {
+      const raw = localStorage.getItem(chatKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as ChatMessage[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          // Don't pre-fill the input with the starter prompt if we
+          // already have a conversation to resume.
+          setInputPrefilled(true);
+        }
+      }
+    } catch {
+      /* ignore corrupted localStorage */
+    } finally {
+      setMessagesHydrated(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!messagesHydrated) return;
+    try {
+      if (messages.length === 0) {
+        localStorage.removeItem(chatKey);
+      } else {
+        localStorage.setItem(chatKey, JSON.stringify(messages));
+      }
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }, [messages, messagesHydrated, chatKey]);
+
+  const clearChat = () => {
+    if (!confirm("Clear this conversation? This can't be undone.")) return;
+    setMessages([]);
+    setInput("");
+    setInputPrefilled(false);
+    try {
+      localStorage.removeItem(chatKey);
+    } catch {
+      /* ignore */
+    }
+  };
 
   useEffect(() => {
     terminalRef.current?.scrollTo(0, terminalRef.current.scrollHeight);
@@ -875,6 +972,29 @@ export default function BuildPage() {
 
       {/* ── CENTER PANEL ── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        {/* top bar — chat title + clear button */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-body text-[11px] uppercase tracking-[0.18em] text-muted shrink-0">
+              Conversation
+            </span>
+            <span className="font-body text-[13px] text-foreground truncate">
+              {productName ||
+                (selectedIdea as { name?: string } | null)?.name ||
+                "New project"}
+            </span>
+          </div>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={clearChat}
+              className="font-body text-[11px] uppercase tracking-[0.15em] text-muted hover:text-foreground transition-colors shrink-0"
+            >
+              Clear chat
+            </button>
+          )}
+        </div>
+
         {/* messages */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-[760px] mx-auto px-8 py-10">
