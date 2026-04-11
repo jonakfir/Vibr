@@ -49,27 +49,30 @@ function extractFileBlocks(
   const lines = text.split("\n");
   let i = 0;
   let lastPathHint: string | null = null;
-  const pathRe = /([\w./\-_]+\.(?:tsx?|jsx?|css|scss|json|md|html|svg|ya?ml|toml|sh|env|gitignore|prisma|sql|py|rs|go))/i;
+  const pathRe = /([\w./\-_]+\.(?:tsx?|jsx?|css|scss|json|md|mdx|html|svg|ya?ml|toml|sh|env|gitignore|prisma|sql|py|rs|go|java|kt|swift|c|cpp|h|rb|php|astro|vue|svelte))/i;
+  // Opening fence variants we accept:
+  //   ```typescript src/app/page.tsx
+  //   ```ts src/app/page.tsx
+  //   ```ts:src/app/page.tsx
+  //   ```ts file=src/app/page.tsx
+  //   ``` src/app/page.tsx
+  const fenceOpenRe = /^```([\w+\-]*)?(?:[\s:]+(?:file=)?(.+?))?\s*$/;
 
   while (i < lines.length) {
     const line = lines[i];
-    const fenceMatch = /^```([\w./\-_:]*)\s*$/.exec(line);
-    if (fenceMatch) {
-      // Look for path in the fence info string itself: ```ts:src/foo.ts
+    const fenceMatch = fenceOpenRe.exec(line);
+    if (fenceMatch && line.startsWith("```")) {
       let path: string | null = null;
-      const info = fenceMatch[1];
-      if (info.includes(":")) {
-        const after = info.split(":").slice(1).join(":");
-        if (pathRe.test(after)) path = pathRe.exec(after)![1];
+      const info = (fenceMatch[2] ?? "").trim();
+      if (info && pathRe.test(info)) {
+        path = pathRe.exec(info)![1];
       }
-      // Otherwise fall back to the most recent path hint we saw in
-      // the previous few lines of prose.
       if (!path && lastPathHint) path = lastPathHint;
 
       // Collect content until the closing fence
       const buf: string[] = [];
       i++;
-      while (i < lines.length && !/^```/.test(lines[i])) {
+      while (i < lines.length && !/^```\s*$/.test(lines[i])) {
         buf.push(lines[i]);
         i++;
       }
@@ -84,14 +87,14 @@ function extractFileBlocks(
     }
 
     // Capture path hints from prose. Prefer backticked paths.
-    const inline = /`([\w./\-_]+\.(?:tsx?|jsx?|css|scss|json|md|html|svg|ya?ml|toml|sh|env|gitignore|prisma|sql|py|rs|go))`/i.exec(
+    const inline = /`([\w./\-_]+\.(?:tsx?|jsx?|css|scss|json|md|mdx|html|svg|ya?ml|toml|sh|env|gitignore|prisma|sql|py|rs|go|java|kt|swift|c|cpp|h|rb|php|astro|vue|svelte))`/i.exec(
       line
     );
     if (inline) {
       lastPathHint = inline[1];
     } else {
       const bare = pathRe.exec(line);
-      if (bare && /update|create|add|edit|file/i.test(line)) {
+      if (bare && /update|create|add|edit|file|new|in\s/i.test(line)) {
         lastPathHint = bare[1];
       }
     }
@@ -120,7 +123,45 @@ const DEFAULT_MODELS: Record<Provider, string> = {
 
 type MdPart =
   | { kind: "prose"; text: string }
-  | { kind: "code"; lang: string; text: string; closed: boolean };
+  | {
+      kind: "code";
+      lang: string;
+      path: string | null;
+      text: string;
+      closed: boolean;
+    };
+
+function splitFenceInfo(info: string): { lang: string; path: string | null } {
+  // Accepts: "typescript src/foo.ts", "ts:src/foo.ts", "ts file=src/foo.ts",
+  // "typescript", or just "src/foo.ts".
+  const trimmed = info.trim();
+  if (!trimmed) return { lang: "", path: null };
+
+  // ts:path
+  if (trimmed.includes(":")) {
+    const [lang, ...rest] = trimmed.split(":");
+    const after = rest.join(":").trim();
+    if (after) return { lang: lang.trim(), path: after };
+  }
+  // ts file=path
+  const fileEq = /\bfile=([^\s]+)/.exec(trimmed);
+  if (fileEq) {
+    return {
+      lang: trimmed.replace(fileEq[0], "").trim(),
+      path: fileEq[1].trim(),
+    };
+  }
+  // ts path
+  const parts = trimmed.split(/\s+/);
+  if (parts.length >= 2) {
+    return { lang: parts[0], path: parts.slice(1).join(" ") };
+  }
+  // bare token: language only, unless it looks like a path
+  if (/[./]/.test(trimmed)) {
+    return { lang: "", path: trimmed };
+  }
+  return { lang: trimmed, path: null };
+}
 
 function parseMarkdown(text: string): MdPart[] {
   const parts: MdPart[] = [];
@@ -137,21 +178,24 @@ function parseMarkdown(text: string): MdPart[] {
     const langEnd = text.indexOf("\n", fence + 3);
     if (langEnd === -1) {
       // fence with no newline yet — render as empty in-progress code block
+      const info = splitFenceInfo(text.slice(fence + 3));
       parts.push({
         kind: "code",
-        lang: text.slice(fence + 3),
+        lang: info.lang,
+        path: info.path,
         text: "",
         closed: false,
       });
       break;
     }
-    const lang = text.slice(fence + 3, langEnd).trim();
+    const info = splitFenceInfo(text.slice(fence + 3, langEnd));
     const close = text.indexOf("```", langEnd + 1);
     if (close === -1) {
       // unterminated → render whatever we have so far as code
       parts.push({
         kind: "code",
-        lang,
+        lang: info.lang,
+        path: info.path,
         text: text.slice(langEnd + 1),
         closed: false,
       });
@@ -159,7 +203,8 @@ function parseMarkdown(text: string): MdPart[] {
     }
     parts.push({
       kind: "code",
-      lang,
+      lang: info.lang,
+      path: info.path,
       text: text.slice(langEnd + 1, close),
       closed: true,
     });
@@ -248,12 +293,27 @@ function renderMarkdown(text: string) {
             key={`c-${i}`}
             className="my-3 border border-border rounded-md overflow-hidden bg-[#0a0a0a]"
           >
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-[#0d0d0d]">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-                {part.lang || "code"}
-              </span>
+            <div className="flex items-center justify-between gap-3 px-3 py-1.5 border-b border-border bg-[#0d0d0d]">
+              <div className="flex items-center gap-2 min-w-0">
+                {part.path ? (
+                  <>
+                    <span className="font-mono text-[11px] text-foreground truncate">
+                      {part.path}
+                    </span>
+                    {part.lang && (
+                      <span className="font-mono text-[9px] uppercase tracking-wider text-muted/60 shrink-0">
+                        {part.lang}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                    {part.lang || "code"}
+                  </span>
+                )}
+              </div>
               {!part.closed && (
-                <span className="font-mono text-[10px] text-muted/60 animate-pulse">
+                <span className="font-mono text-[10px] text-muted/60 animate-pulse shrink-0">
                   streaming…
                 </span>
               )}
