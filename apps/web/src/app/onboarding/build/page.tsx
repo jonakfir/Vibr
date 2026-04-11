@@ -168,9 +168,52 @@ export default function BuildPage() {
   const [baseUrl, setBaseUrl] = useState("");
   const [savingPrompt, setSavingPrompt] = useState(false);
 
+  /* credentials hydrate from localStorage on mount so the user doesn't
+     have to re-enter their API key after every refresh. We persist
+     under a single namespaced key. We use a state flag instead of a
+     ref so the persist-effect runs in a render where state already
+     reflects the hydrated values — this avoids clobbering localStorage
+     with the empty defaults. */
+  const [credsHydrated, setCredsHydrated] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("vibr.byok");
+      if (raw) {
+        const c = JSON.parse(raw) as {
+          provider?: Provider;
+          apiKey?: string;
+          model?: string;
+          baseUrl?: string;
+        };
+        if (c.provider) setProvider(c.provider);
+        if (typeof c.apiKey === "string") setApiKey(c.apiKey);
+        if (typeof c.model === "string" && c.model) setModel(c.model);
+        if (typeof c.baseUrl === "string") setBaseUrl(c.baseUrl);
+      }
+    } catch {
+      /* ignore corrupted localStorage */
+    } finally {
+      setCredsHydrated(true);
+    }
+  }, []);
+
+  /* persist whenever they change */
+  useEffect(() => {
+    if (!credsHydrated) return;
+    try {
+      localStorage.setItem(
+        "vibr.byok",
+        JSON.stringify({ provider, apiKey, model, baseUrl })
+      );
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }, [credsHydrated, provider, apiKey, model, baseUrl]);
+
   /* center panel */
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [inputPrefilled, setInputPrefilled] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -212,6 +255,19 @@ export default function BuildPage() {
       if (!prompt) generatePrompt();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Pre-fill the chat input with the generated first prompt so the user
+     has a ready-to-send starter message. They can edit it before
+     sending. We only do this once, and only when the conversation is
+     still empty — never overwrite anything they've started typing. */
+  useEffect(() => {
+    if (inputPrefilled) return;
+    if (messages.length > 0) return;
+    if (!prompt) return;
+    if (input.length > 0) return;
+    setInput(prompt);
+    setInputPrefilled(true);
+  }, [prompt, messages.length, input.length, inputPrefilled]);
 
   /* ── vibr-local connection ── */
 
@@ -255,11 +311,21 @@ export default function BuildPage() {
     terminalRef.current?.scrollTo(0, terminalRef.current.scrollHeight);
   }, [terminalOutput]);
 
-  /* ── provider change ── */
+  /* ── provider change ──
+     When the user changes provider, swap to the default model for that
+     provider — but ONLY after hydration, otherwise hydrating "openai"
+     from localStorage would clobber the saved model with the default. */
 
+  const lastProviderRef = useRef<Provider | null>(null);
   useEffect(() => {
+    if (!credsHydrated) {
+      lastProviderRef.current = provider;
+      return;
+    }
+    if (lastProviderRef.current === provider) return;
+    lastProviderRef.current = provider;
     setModel(DEFAULT_MODELS[provider]);
-  }, [provider]);
+  }, [provider, credsHydrated]);
 
   /* ── send message ── */
 
@@ -269,11 +335,13 @@ export default function BuildPage() {
     const userMsg: ChatMessage = { role: "user", content: input.trim() };
     const allMessages = [...messages, userMsg];
 
-    // prepend system prompt on first message
-    const apiMessages =
-      messages.length === 0 && prompt
-        ? [{ role: "user" as const, content: `${prompt}\n\n---\n\n${userMsg.content}` }]
-        : allMessages.map((m) => ({ role: m.role, content: m.content }));
+    // The first message in the conversation is now pre-filled with the
+    // generated starter prompt itself, so we don't need to prepend it
+    // again. Just send the conversation as-is.
+    const apiMessages = allMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
     setMessages(allMessages);
     setInput("");
@@ -293,10 +361,15 @@ export default function BuildPage() {
       });
 
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: `Error: ${err.error || "Request failed"}` },
+          {
+            role: "assistant",
+            content: `Error (HTTP ${res.status}): ${
+              err.error || "Request failed"
+            }`,
+          },
         ]);
         setStreaming(false);
         return;
@@ -341,10 +414,15 @@ export default function BuildPage() {
           }
         }
       }
-    } catch {
+    } catch (err) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Connection error. Please try again." },
+        {
+          role: "assistant",
+          content: `Connection error: ${
+            err instanceof Error ? err.message : "Unknown error"
+          }. Check that your API key is correct and your network is reachable.`,
+        },
       ]);
     } finally {
       setStreaming(false);

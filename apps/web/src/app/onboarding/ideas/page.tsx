@@ -38,6 +38,15 @@ export default function IdeasPage() {
     boolean | null
   >(null);
 
+  // "Describe your own idea" sub-mode: when the user doesn't want any of
+  // the generated ideas, they flip this on and fill out a small form.
+  // Submitting the form writes a synthetic idea into `selectedIdea` so the
+  // rest of the onboarding flow (naming, building) works unchanged.
+  const [customIdeaMode, setCustomIdeaMode] = useState(false);
+  const [ownIdeaName, setOwnIdeaName] = useState("");
+  const [ownIdeaSector, setOwnIdeaSector] = useState("");
+  const [ownIdeaDesc, setOwnIdeaDesc] = useState("");
+
   const fetchIdeas = useCallback(async () => {
     if (ideas.length > 0) return;
     setLoading(true);
@@ -307,12 +316,52 @@ export default function IdeasPage() {
           ← Back
         </button>
 
-        <h1 className="font-heading font-light text-title text-foreground mb-16">
-          Here&rsquo;s what you could build.
-        </h1>
+        <div className="flex items-end justify-between flex-wrap gap-6 mb-16">
+          <h1 className="font-heading font-light text-title text-foreground">
+            {customIdeaMode
+              ? "Describe your idea."
+              : "Here\u2019s what you could build."}
+          </h1>
+
+          <div className="flex gap-4">
+            {!customIdeaMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedIdea(null);
+                  setIdeas([]);
+                  fetchIdeas();
+                }}
+                disabled={loading}
+                className="inline-flex items-center font-body text-[12px] uppercase tracking-[0.15em] border border-border text-muted px-4 py-2.5 hover:border-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loading ? "Generating\u2026" : "Regenerate"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (customIdeaMode) {
+                  // Going back to the list view — reset the custom form
+                  // fields so the next time they open it it's clean.
+                  setCustomIdeaMode(false);
+                  setOwnIdeaName("");
+                  setOwnIdeaSector("");
+                  setOwnIdeaDesc("");
+                } else {
+                  setSelectedIdea(null);
+                  setCustomIdeaMode(true);
+                }
+              }}
+              className="inline-flex items-center font-body text-[12px] uppercase tracking-[0.15em] border border-accent/60 text-accent px-4 py-2.5 hover:border-accent transition-colors"
+            >
+              {customIdeaMode ? "Back to generated" : "Describe your own"}
+            </button>
+          </div>
+        </div>
       </motion.div>
 
-      {ideaError && (
+      {!customIdeaMode && ideaError && (
         <div className="mb-10 border border-red-500/40 px-4 py-3 font-body text-[13px] text-red-300 flex items-center justify-between gap-4">
           <span>{ideaError}</span>
           <button
@@ -328,7 +377,7 @@ export default function IdeasPage() {
         </div>
       )}
 
-      {!loading && !ideaError && ideas.length === 0 && (
+      {!customIdeaMode && !loading && !ideaError && ideas.length === 0 && (
         <div className="mb-10 border border-border px-4 py-6 text-center font-body text-[13px] text-muted">
           No ideas yet.{" "}
           <button
@@ -341,34 +390,117 @@ export default function IdeasPage() {
         </div>
       )}
 
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.7, delay: 0.2 }}
-      >
-        {ideas.map((idea, i) => (
-          <motion.div
-            key={idea.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 * i }}
-          >
-            <IdeaCard
-              sector={idea.sector}
-              name={idea.name}
-              description={idea.description}
-              metadata={idea.metadata}
-              selected={selectedIdea?.id === idea.id}
-              onSelect={() =>
-                setSelectedIdea(
-                  selectedIdea?.id === idea.id ? null : idea
-                )
-              }
+      {!customIdeaMode && (
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.2 }}
+        >
+          {ideas.map((idea, i) => (
+            <motion.div
+              key={idea.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 * i }}
+            >
+              <IdeaCard
+                sector={idea.sector}
+                name={idea.name}
+                description={idea.description}
+                metadata={idea.metadata}
+                selected={selectedIdea?.id === idea.id}
+                onSelect={() =>
+                  setSelectedIdea(
+                    selectedIdea?.id === idea.id ? null : idea
+                  )
+                }
+              />
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
+
+      {customIdeaMode && (
+        <motion.div
+          className="max-w-[640px] mb-16 flex flex-col gap-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="font-body text-body text-muted leading-relaxed">
+            Tell us what you want to build. We&rsquo;ll use this to name it,
+            scaffold the project, and write the first prompt for you.
+          </p>
+
+          <div>
+            <p className="font-body text-[11px] uppercase tracking-[0.2em] text-muted mb-2">
+              Working title
+            </p>
+            <input
+              type="text"
+              value={ownIdeaName}
+              onChange={(e) => setOwnIdeaName(e.target.value)}
+              placeholder="e.g. CodeReview Bot"
+              className="w-full bg-transparent border-0 border-b border-border focus:border-foreground outline-none font-body text-[15px] text-foreground pb-2 transition-colors"
             />
-          </motion.div>
-        ))}
-      </motion.div>
+          </div>
+
+          <div>
+            <p className="font-body text-[11px] uppercase tracking-[0.2em] text-muted mb-2">
+              Category (optional)
+            </p>
+            <input
+              type="text"
+              value={ownIdeaSector}
+              onChange={(e) => setOwnIdeaSector(e.target.value)}
+              placeholder="e.g. Developer Tools"
+              className="w-full bg-transparent border-0 border-b border-border focus:border-foreground outline-none font-body text-[15px] text-foreground pb-2 transition-colors"
+            />
+          </div>
+
+          <div>
+            <p className="font-body text-[11px] uppercase tracking-[0.2em] text-muted mb-2">
+              Describe your idea
+            </p>
+            <textarea
+              value={ownIdeaDesc}
+              onChange={(e) => setOwnIdeaDesc(e.target.value)}
+              placeholder="What does it do? Who is it for? What problem does it solve? The more detail you give, the better the first prompt will be."
+              rows={6}
+              className="w-full bg-transparent border-0 border-b border-border focus:border-foreground outline-none font-body text-[15px] text-foreground pb-2 transition-colors resize-none leading-relaxed"
+            />
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              disabled={!ownIdeaName.trim() || !ownIdeaDesc.trim()}
+              onClick={() => {
+                const customIdea = {
+                  id: `custom-${Date.now()}`,
+                  name: ownIdeaName.trim(),
+                  description: ownIdeaDesc.trim(),
+                  sector: ownIdeaSector.trim() || "Custom",
+                  metadata: {
+                    market: "—",
+                    timeline: "—",
+                    competition: "—",
+                  },
+                  is_custom: true,
+                };
+                setSelectedIdea(customIdea);
+                // Pre-fill the product name with the working title so the
+                // user doesn't have to retype it on the next step.
+                if (!productName) setProductName(ownIdeaName.trim());
+              }}
+              className="inline-flex items-center bg-foreground text-background py-3 px-8 font-body text-[12px] uppercase tracking-[0.15em] hover:bg-foreground/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Use this idea
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {selectedIdea && (
         <motion.div
