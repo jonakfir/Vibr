@@ -876,22 +876,27 @@ export default function BuildPage() {
       {/* ── CENTER PANEL ── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* messages */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-[760px] mx-auto px-8 py-10">
           {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full px-8">
-              <div className="text-center max-w-[420px]">
+            <div className="flex items-center justify-center min-h-[60vh] px-4">
+              <div className="text-center max-w-[440px]">
+                {/* Vibr mark */}
+                <div className="mx-auto w-12 h-12 rounded-full border border-border flex items-center justify-center font-heading text-[20px] text-foreground mb-6">
+                  V
+                </div>
                 {!connected ? (
                   <>
-                    <p className="font-body text-body text-foreground mb-2">
+                    <p className="font-heading font-light text-[22px] text-foreground mb-3">
                       Connect a project folder to begin.
                     </p>
-                    <p className="font-body text-small text-muted leading-relaxed">
+                    <p className="font-body text-[14px] text-muted leading-relaxed">
                       Vibr writes the files it generates straight to disk on
-                      your machine. Click <strong>Open folder</strong> on the
+                      your machine. Click <strong className="text-foreground">Open folder</strong> on the
                       right and grant write access — the conversation
                       unlocks once a folder is connected.
                     </p>
-                    <p className="mt-3 font-body text-[12px] text-muted/70 leading-relaxed">
+                    <p className="mt-4 font-body text-[12px] text-muted/70 leading-relaxed">
                       Heads up: Chrome won&rsquo;t let you pick Desktop,
                       Documents, or Downloads themselves. Make a subfolder
                       like <code className="font-mono text-foreground">~/Desktop/my-app</code> first
@@ -899,45 +904,68 @@ export default function BuildPage() {
                     </p>
                   </>
                 ) : (
-                  <p className="font-body text-small text-muted">
-                    {flowMode === "import"
-                      ? "Describe what you want to add, change, or fix in your project."
-                      : "Start coding by describing what you want to build."}
-                  </p>
+                  <>
+                    <p className="font-heading font-light text-[22px] text-foreground mb-3">
+                      What should we build?
+                    </p>
+                    <p className="font-body text-[14px] text-muted leading-relaxed">
+                      {flowMode === "import"
+                        ? "Describe what you want to add, change, or fix in your project. Vibr will edit the files in place."
+                        : "Describe what you want to ship. Vibr scaffolds the project, writes the files, and gives you a list of next steps."}
+                    </p>
+                  </>
                 )}
               </div>
             </div>
           )}
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={
-                msg.role === "user" ? "flex justify-end" : "flex justify-start"
-              }
-            >
-              <div
-                className={
-                  msg.role === "user"
-                    ? "max-w-[80%] bg-card border border-card-border rounded-[4px] px-4 py-3"
-                    : "max-w-[80%]"
-                }
-              >
-                <div className="font-body text-small text-foreground leading-relaxed">
-                  {msg.role === "assistant"
-                    ? renderMarkdown(msg.content)
-                    : msg.content}
+
+          {messages.map((msg, i) => {
+            const isUser = msg.role === "user";
+            const isLastAssistant =
+              !isUser && i === messages.length - 1 && streaming;
+            return (
+              <div key={i} className="mb-10 first:mt-0">
+                {/* role label */}
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center font-heading text-[12px] ${
+                      isUser
+                        ? "bg-foreground/10 text-foreground border border-border"
+                        : "bg-emerald-400/10 text-emerald-300 border border-emerald-400/30"
+                    }`}
+                  >
+                    {isUser ? "Y" : "V"}
+                  </div>
+                  <span className="font-body text-[11px] uppercase tracking-[0.18em] text-muted">
+                    {isUser ? "You" : "Vibr"}
+                  </span>
                 </div>
-                {msg.role === "assistant" &&
-                  msg.writes &&
-                  msg.writes.length > 0 && (
-                    <div className="mt-3 border border-border rounded-md bg-[#0a0a0a] divide-y divide-border">
-                      <div className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-muted">
-                        Files written
+
+                {/* content */}
+                <div className="pl-[38px]">
+                  {isUser ? (
+                    <div className="font-body text-[15px] text-foreground/90 leading-[1.7] whitespace-pre-wrap">
+                      {msg.content}
+                    </div>
+                  ) : (
+                    <div className="font-body text-[15px] text-foreground/90 leading-[1.7]">
+                      {renderMarkdown(msg.content)}
+                      {isLastAssistant && msg.content.length > 0 && (
+                        <span className="inline-block w-[7px] h-[15px] bg-foreground/70 align-text-bottom ml-0.5 animate-pulse" />
+                      )}
+                    </div>
+                  )}
+
+                  {!isUser && msg.writes && msg.writes.length > 0 && (
+                    <div className="mt-4 border border-border rounded-md bg-[#0a0a0a] divide-y divide-border">
+                      <div className="px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Files written to disk
                       </div>
                       {msg.writes.map((w) => (
                         <div
                           key={w.path}
-                          className="px-3 py-1.5 flex items-center gap-2 font-mono text-[11px]"
+                          className="px-3 py-2 flex items-center gap-2 font-mono text-[11px]"
                         >
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${
@@ -954,49 +982,83 @@ export default function BuildPage() {
                       ))}
                     </div>
                   )}
+                </div>
               </div>
-            </div>
-          ))}
-          {streaming && (
-            <div className="flex justify-start">
-              <span className="font-body text-small text-muted animate-pulse">
-                ...
-              </span>
-            </div>
-          )}
+            );
+          })}
+
+          {/* "thinking" indicator only when no assistant message has started yet */}
+          {streaming &&
+            (messages[messages.length - 1]?.role !== "assistant" ||
+              messages[messages.length - 1]?.content === "") && (
+              <div className="mb-10 pl-[38px] flex items-center gap-2 font-body text-[13px] text-muted">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 animate-pulse [animation-delay:150ms]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 animate-pulse [animation-delay:300ms]" />
+                <span className="ml-1">Vibr is thinking…</span>
+              </div>
+            )}
           <div ref={messagesEndRef} />
+          </div>
         </div>
 
-        {/* input */}
-        <div className="border-t border-border p-4 flex gap-3 items-end">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder={
-              !apiKey
-                ? "Enter an API key on the left to start"
-                : !connected
-                  ? "Connect a project folder on the right first"
-                  : "Describe what you want to build…"
-            }
-            disabled={!apiKey || !connected || streaming}
-            rows={2}
-            className="flex-1 bg-transparent font-body text-small text-foreground border-0 border-b border-border focus:border-foreground outline-none resize-none py-2 transition-colors duration-300 disabled:opacity-50"
-          />
-          <button
-            type="button"
-            onClick={sendMessage}
-            disabled={!input.trim() || streaming || !apiKey || !connected}
-            className="font-body text-xs text-muted hover:text-foreground disabled:opacity-30 transition-colors duration-300 pb-2"
-          >
-            Send
-          </button>
+        {/* input — centered, rounded, Claude-style composer */}
+        <div className="border-t border-border px-6 pt-4 pb-5">
+          <div className="max-w-[760px] mx-auto">
+            <div
+              className={`flex gap-2 items-end rounded-2xl border bg-[#0c0c0c] px-4 py-3 transition-colors ${
+                !apiKey || !connected
+                  ? "border-border/60"
+                  : "border-border focus-within:border-foreground/40"
+              }`}
+            >
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder={
+                  !apiKey
+                    ? "Enter an API key on the left to start"
+                    : !connected
+                      ? "Connect a project folder on the right first"
+                      : "Reply to Vibr…"
+                }
+                disabled={!apiKey || !connected || streaming}
+                rows={1}
+                className="flex-1 bg-transparent font-body text-[15px] text-foreground placeholder:text-muted/60 outline-none resize-none leading-[1.55] max-h-[260px] disabled:opacity-50"
+              />
+              <button
+                type="button"
+                onClick={sendMessage}
+                disabled={!input.trim() || streaming || !apiKey || !connected}
+                className="shrink-0 w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-foreground/90 transition-colors"
+                aria-label="Send"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="12" y1="19" x2="12" y2="5" />
+                  <polyline points="5 12 12 5 19 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="mt-2 text-center font-body text-[10px] uppercase tracking-[0.18em] text-muted/60">
+              Vibr writes files straight to {folderName || "your folder"} ·
+              Shift + Enter for newline
+            </p>
+          </div>
         </div>
 
         {/* bottom bar */}
