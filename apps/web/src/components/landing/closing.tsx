@@ -9,7 +9,7 @@ export default function Closing() {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center bg-background/70 overflow-hidden">
       {/* Background glow */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="w-[1000px] h-[600px] bg-[radial-gradient(ellipse_at_center,rgba(180,140,60,0.06),transparent_70%)] blur-3xl" />

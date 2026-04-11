@@ -11,7 +11,7 @@ const marketers = [
 
 export default function MarketerSection() {
   return (
-    <section className="relative py-32 bg-background">
+    <section className="relative py-32 bg-background/70">
       <div className="max-w-[1200px] mx-auto px-6">
         <div className="grid md:grid-cols-2 gap-16">
           {/* Marketer cards */}

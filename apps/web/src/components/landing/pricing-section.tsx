@@ -18,7 +18,7 @@ export default function PricingSection() {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section className="relative py-32 bg-background">
+    <section className="relative py-32 bg-background/70">
       <div className="max-w-[1200px] mx-auto px-6">
         <FadeInOnScroll>
           <div
