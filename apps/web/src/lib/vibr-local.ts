@@ -102,13 +102,24 @@ export async function openFolderPicker(): Promise<string> {
     );
   }
   try {
+    // startIn opens the picker at a familiar location so the user
+    // doesn't have to navigate from /. Chrome blocks picking Desktop /
+    // Documents / Downloads themselves (they "contain system files"),
+    // so we suggest "desktop" only as a starting directory — the user
+    // still has to drill into a project subfolder.
     const handle = (await (
       window as unknown as {
         showDirectoryPicker: (opts?: {
           mode?: "read" | "readwrite";
+          startIn?: string;
+          id?: string;
         }) => Promise<DirHandle>;
       }
-    ).showDirectoryPicker({ mode: "readwrite" })) as DirHandle;
+    ).showDirectoryPicker({
+      mode: "readwrite",
+      startIn: "desktop",
+      id: "vibr-project",
+    })) as DirHandle;
 
     // Force a write-permission prompt up front. Some browsers grant
     // read on pick but require an explicit request for write.

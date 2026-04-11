@@ -831,6 +831,12 @@ export default function BuildPage() {
                       right and grant write access — the conversation
                       unlocks once a folder is connected.
                     </p>
+                    <p className="mt-3 font-body text-[12px] text-muted/70 leading-relaxed">
+                      Heads up: Chrome won&rsquo;t let you pick Desktop,
+                      Documents, or Downloads themselves. Make a subfolder
+                      like <code className="font-mono text-foreground">~/Desktop/my-app</code> first
+                      and pick that.
+                    </p>
                   </>
                 ) : (
                   <p className="font-body text-small text-muted">
@@ -966,6 +972,14 @@ export default function BuildPage() {
           >
             {connected ? "Pick a different folder" : "Open folder"}
           </button>
+          {!connected && (
+            <p className="mt-3 font-body text-[10px] text-muted/80 leading-relaxed">
+              Pick a <strong className="text-foreground">project subfolder</strong> like
+              <code className="font-mono">~/Desktop/my-app</code>. Chrome
+              blocks Desktop, Documents, and Downloads themselves —
+              create or choose a folder inside one of them first.
+            </p>
+          )}
           {folderError && (
             <p className="mt-3 font-body text-[11px] text-red-400 leading-relaxed">
               {folderError}
