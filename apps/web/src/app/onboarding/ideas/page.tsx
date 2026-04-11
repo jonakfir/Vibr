@@ -22,6 +22,7 @@ export default function IdeasPage() {
   const setSelectedIdea = useStore((s) => s.setSelectedIdea);
   const productName = useStore((s) => s.productName);
   const setProductName = useStore((s) => s.setProductName);
+  const setPrompt = useStore((s) => s.setPrompt);
   const flowMode = useStore((s) => s.flowMode);
   const setFlowMode = useStore((s) => s.setFlowMode);
   const projectDescription = useStore((s) => s.projectDescription);
@@ -330,6 +331,8 @@ export default function IdeasPage() {
                 onClick={() => {
                   setSelectedIdea(null);
                   setIdeas([]);
+                  setPrompt("");
+                  setProductName("");
                   fetchIdeas();
                 }}
                 disabled={loading}
@@ -410,11 +413,21 @@ export default function IdeasPage() {
                 description={idea.description}
                 metadata={idea.metadata}
                 selected={selectedIdea?.id === idea.id}
-                onSelect={() =>
-                  setSelectedIdea(
-                    selectedIdea?.id === idea.id ? null : idea
-                  )
-                }
+                onSelect={() => {
+                  if (selectedIdea?.id === idea.id) {
+                    // Deselect
+                    setSelectedIdea(null);
+                    setPrompt("");
+                    setProductName("");
+                    return;
+                  }
+                  // Switching to a DIFFERENT idea — wipe the stale
+                  // prompt / product name so the build page
+                  // regenerates them from the new idea data.
+                  setSelectedIdea(idea);
+                  setPrompt("");
+                  setProductName("");
+                }}
               />
             </motion.div>
           ))}
@@ -490,9 +503,12 @@ export default function IdeasPage() {
                   is_custom: true,
                 };
                 setSelectedIdea(customIdea);
-                // Pre-fill the product name with the working title so the
-                // user doesn't have to retype it on the next step.
-                if (!productName) setProductName(ownIdeaName.trim());
+                // New idea → wipe any stale prompt so the build page
+                // regenerates from this one.
+                setPrompt("");
+                // Always overwrite the product name with the working
+                // title of the custom idea so the build step matches.
+                setProductName(ownIdeaName.trim());
               }}
               className="inline-flex items-center bg-foreground text-background py-3 px-8 font-body text-[12px] uppercase tracking-[0.15em] hover:bg-foreground/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >

@@ -152,6 +152,10 @@ export default function ProfilePage() {
   const profile = useStore((s) => s.profile);
   const setProfile = useStore((s) => s.setProfile);
   const setSessionId = useStore((s) => s.setSessionId);
+  const setIdeas = useStore((s) => s.setIdeas);
+  const setSelectedIdea = useStore((s) => s.setSelectedIdea);
+  const setPrompt = useStore((s) => s.setPrompt);
+  const setProductName = useStore((s) => s.setProductName);
 
   const [resumeFile, setResumeFile] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -282,6 +286,16 @@ export default function ProfilePage() {
   async function handleContinue() {
     if (!profile.full_name.trim()) return;
     setSubmitting(true);
+
+    // Profile changed → every downstream thing (previously-generated
+    // ideas, the selected idea, the generated build prompt, the
+    // chosen product name) is stale and must be cleared. Otherwise
+    // the user updates their profile, clicks through to /ideas, and
+    // sees cached results from the old profile.
+    setIdeas([]);
+    setSelectedIdea(null);
+    setPrompt("");
+    setProductName("");
 
     try {
       const supabase = createClient();

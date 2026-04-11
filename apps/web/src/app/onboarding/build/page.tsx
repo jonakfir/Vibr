@@ -535,16 +535,38 @@ export default function BuildPage() {
     }
   }, [selectedIdea, productName, setPrompt]);
 
+  // Regenerate the build prompt whenever the selected idea or product
+  // name changes. This fires on mount AND when the user picks a new
+  // idea upstream. A ref tracks the last idea we generated for so the
+  // effect doesn't re-trigger on other unrelated re-renders.
+  const lastPromptForRef = useRef<string | null>(null);
   useEffect(() => {
+    const fingerprint = `${
+      (selectedIdea as { id?: string } | null)?.id ?? ""
+    }:${productName}`;
+
     if (flowMode === "import") {
-      // For import mode, set a contextual prompt if user provided a description
+      // Import mode prompt is derived from the user-supplied project
+      // description, not from the idea data. Only set it if empty.
       if (!prompt && projectDescription) {
-        setPrompt(`Project: ${productName}\n\nDescription: ${projectDescription}\n\nConnect vibr-local and open your project folder to get started. You can ask the AI to analyze your codebase, add features, fix bugs, or refactor code.`);
+        setPrompt(
+          `Project: ${productName}\n\nDescription: ${projectDescription}\n\nConnect vibr-local and open your project folder to get started. You can ask the AI to analyze your codebase, add features, fix bugs, or refactor code.`
+        );
       }
-    } else {
-      if (!prompt) generatePrompt();
+      lastPromptForRef.current = fingerprint;
+      return;
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (!selectedIdea || !productName) return;
+    if (lastPromptForRef.current === fingerprint && prompt) return;
+    lastPromptForRef.current = fingerprint;
+    generatePrompt();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    (selectedIdea as { id?: string } | null)?.id,
+    productName,
+    flowMode,
+  ]);
 
   /* Pre-fill the chat input with the generated first prompt so the user
      has a ready-to-send starter message. They can edit it before
