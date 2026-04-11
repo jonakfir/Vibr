@@ -29,6 +29,7 @@ export default function IdeasPage() {
 
   const [modeChosen, setModeChosen] = useState(flowMode !== "generate" ? true : false);
   const [loading, setLoading] = useState(false);
+  const [ideaError, setIdeaError] = useState<string | null>(null);
   const [nameSuggestions, setNameSuggestions] = useState<NameSuggestion[]>([]);
   const [loadingNames, setLoadingNames] = useState(false);
   const [customName, setCustomName] = useState("");
@@ -40,6 +41,7 @@ export default function IdeasPage() {
   const fetchIdeas = useCallback(async () => {
     if (ideas.length > 0) return;
     setLoading(true);
+    setIdeaError(null);
 
     try {
       const res = await fetch("/api/generate-ideas", {
@@ -52,12 +54,28 @@ export default function IdeasPage() {
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setIdeas(data.ideas ?? []);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setIdeaError(
+          (data && typeof data.error === "string" && data.error) ||
+            `Couldn't generate ideas (HTTP ${res.status}).`
+        );
+        setIdeas([]);
+        return;
       }
-    } catch {
-      // Silent fail
+
+      const fetched = Array.isArray(data.ideas) ? data.ideas : [];
+      setIdeas(fetched);
+      if (fetched.length === 0) {
+        setIdeaError("No ideas came back from the generator. Try again.");
+      }
+    } catch (err) {
+      setIdeaError(
+        err instanceof Error
+          ? err.message
+          : "Couldn't reach the idea generator."
+      );
     } finally {
       setLoading(false);
     }
@@ -293,6 +311,35 @@ export default function IdeasPage() {
           Here&rsquo;s what you could build.
         </h1>
       </motion.div>
+
+      {ideaError && (
+        <div className="mb-10 border border-red-500/40 px-4 py-3 font-body text-[13px] text-red-300 flex items-center justify-between gap-4">
+          <span>{ideaError}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setIdeas([]);
+              fetchIdeas();
+            }}
+            className="font-body text-[11px] uppercase tracking-[0.15em] text-red-200 hover:text-white transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !ideaError && ideas.length === 0 && (
+        <div className="mb-10 border border-border px-4 py-6 text-center font-body text-[13px] text-muted">
+          No ideas yet.{" "}
+          <button
+            type="button"
+            onClick={fetchIdeas}
+            className="text-foreground hover:underline"
+          >
+            Generate now
+          </button>
+        </div>
+      )}
 
       <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16"
