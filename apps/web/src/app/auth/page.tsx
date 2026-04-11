@@ -1,22 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Nav } from "@/components/ui/nav";
 import { Footer } from "@/components/ui/footer";
 
+type Mode = "signin" | "signup";
+
 export default function AuthPage() {
+  const router = useRouter();
+  const [mode, setMode] = useState<Mode>("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+
+  // After any successful sign-in, we want to honor an optional ?next= param
+  // from the middleware so the user lands where they originally tried to go.
+  const getNextPath = () => {
+    if (typeof window === "undefined") return "/onboarding";
+    const params = new URLSearchParams(window.location.search);
+    return params.get("next") || "/onboarding";
+  };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
+    setInfo(null);
     try {
       const supabase = createClient();
-      // If middleware bounced the user here with ?next=/onboarding (or similar),
-      // forward that path onto the callback so they end up where they meant
-      // to go after signing in.
       const params = new URLSearchParams(window.location.search);
       const nextParam = params.get("next");
       const redirectTo = new URL("/auth/callback", window.location.origin);
@@ -24,9 +39,7 @@ export default function AuthPage() {
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: redirectTo.toString(),
-        },
+        options: { redirectTo: redirectTo.toString() },
       });
       if (error) {
         setError(error.message);
@@ -38,19 +51,82 @@ export default function AuthPage() {
     }
   };
 
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setInfo(null);
+
+    try {
+      const supabase = createClient();
+
+      if (mode === "signup") {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName },
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+
+        if (signUpError) {
+          setError(signUpError.message);
+          setLoading(false);
+          return;
+        }
+
+        // If email confirmation is on, the user needs to verify first.
+        if (data.user && !data.session) {
+          setInfo(
+            "Check your inbox — we sent a confirmation link to finish signing up."
+          );
+          setLoading(false);
+          return;
+        }
+
+        // If confirmations are off (auto-confirm), we have a session now.
+        router.push(getNextPath());
+        router.refresh();
+        return;
+      }
+
+      // Sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
+
+      router.push(getNextPath());
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign-in failed");
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Nav />
 
       <main className="flex-1 flex items-center justify-center px-6 pt-32 pb-24">
-        <div className="w-full max-w-[440px] text-center">
-          <h1 className="font-heading font-light text-[56px] md:text-[72px] leading-[0.95] text-foreground">
-            Sign in
+        <div className="w-full max-w-[440px]">
+          <h1 className="font-heading font-light text-[56px] md:text-[72px] leading-[0.95] text-foreground text-center">
+            {mode === "signin" ? "Sign in" : "Create account"}
           </h1>
-          <p className="mt-6 font-body text-muted text-[15px]">
-            Continue with Google to start building.
+          <p className="mt-6 font-body text-muted text-[15px] text-center">
+            {mode === "signin"
+              ? "Welcome back. Pick up where you left off."
+              : "Start turning your skills into a product."}
           </p>
 
+          {/* Google */}
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
@@ -79,11 +155,134 @@ export default function AuthPage() {
             </span>
           </button>
 
+          {/* Divider */}
+          <div className="mt-10 mb-8 flex items-center gap-4">
+            <div className="flex-1 h-px bg-border" />
+            <span className="font-body text-[11px] uppercase tracking-[0.2em] text-muted">
+              or
+            </span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Email / password form */}
+          <form onSubmit={handleEmailSubmit} className="space-y-6">
+            {mode === "signup" && (
+              <div>
+                <label className="block font-body text-[11px] uppercase tracking-[0.2em] text-muted mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                  disabled={loading}
+                  autoComplete="name"
+                  className="w-full bg-transparent border-0 border-b border-border focus:border-foreground outline-none font-body text-[15px] text-foreground pb-2 transition-colors duration-300 disabled:opacity-50"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block font-body text-[11px] uppercase tracking-[0.2em] text-muted mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                autoComplete="email"
+                className="w-full bg-transparent border-0 border-b border-border focus:border-foreground outline-none font-body text-[15px] text-foreground pb-2 transition-colors duration-300 disabled:opacity-50"
+              />
+            </div>
+
+            <div>
+              <label className="block font-body text-[11px] uppercase tracking-[0.2em] text-muted mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                disabled={loading}
+                autoComplete={
+                  mode === "signup" ? "new-password" : "current-password"
+                }
+                className="w-full bg-transparent border-0 border-b border-border focus:border-foreground outline-none font-body text-[15px] text-foreground pb-2 transition-colors duration-300 disabled:opacity-50"
+              />
+              {mode === "signup" && (
+                <p className="mt-2 font-body text-[11px] text-muted">
+                  At least 6 characters.
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center bg-foreground text-background py-4 px-6 font-body text-[14px] uppercase tracking-[0.15em] hover:bg-foreground/90 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading
+                ? mode === "signup"
+                  ? "Creating..."
+                  : "Signing in..."
+                : mode === "signup"
+                ? "Create account"
+                : "Sign in"}
+            </button>
+          </form>
+
           {error && (
-            <p className="mt-6 font-body text-[13px] text-red-400">{error}</p>
+            <p className="mt-6 font-body text-[13px] text-red-400 text-center">
+              {error}
+            </p>
+          )}
+          {info && (
+            <p className="mt-6 font-body text-[13px] text-foreground text-center">
+              {info}
+            </p>
           )}
 
-          <p className="mt-12 font-body text-[12px] text-muted">
+          {/* Toggle between sign in / sign up */}
+          <p className="mt-10 font-body text-[13px] text-muted text-center">
+            {mode === "signin" ? (
+              <>
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("signup");
+                    setError(null);
+                    setInfo(null);
+                  }}
+                  className="text-foreground hover:underline underline-offset-4"
+                >
+                  Create one
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("signin");
+                    setError(null);
+                    setInfo(null);
+                  }}
+                  className="text-foreground hover:underline underline-offset-4"
+                >
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
+
+          <p className="mt-12 font-body text-[12px] text-muted text-center">
             By continuing, you agree to our terms of service.
           </p>
         </div>

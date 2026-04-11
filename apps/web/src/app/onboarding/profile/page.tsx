@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { FormInput } from "@/components/ui/form-input";
@@ -157,6 +157,99 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // On mount, pre-populate the form with whatever we already know about the
+  // user: (a) any existing row in the `profiles` table, (b) fallback to their
+  // Google OAuth metadata (full_name from user_metadata.name or .full_name),
+  // (c) finally the raw email. This means a user who just signed in with
+  // Google doesn't land on a completely empty profile form.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+
+        // Google metadata lives on user_metadata and comes from the OAuth
+        // provider. `full_name` and `name` are both common shapes.
+        const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+        const metaName =
+          (typeof meta.full_name === "string" && meta.full_name) ||
+          (typeof meta.name === "string" && meta.name) ||
+          "";
+        const metaAvatar =
+          (typeof meta.avatar_url === "string" && meta.avatar_url) || "";
+
+        // Load the existing row from the profiles table if it exists — this
+        // is what we want to actually show as source of truth if the user
+        // has already filled anything in before.
+        const { data: existing } = (await supabase
+          .from("profiles")
+          .select("full_name, skills, experience_level, interests, linkedin_url, resume_url")
+          .eq("id", user.id)
+          .maybeSingle()) as {
+          data: {
+            full_name: string | null;
+            skills: string[] | null;
+            experience_level: string | null;
+            interests: string[] | null;
+            linkedin_url: string | null;
+            resume_url: string | null;
+          } | null;
+        };
+
+        if (cancelled) return;
+
+        const merged = {
+          full_name: existing?.full_name || metaName || "",
+          skills: existing?.skills ?? [],
+          experience_level: existing?.experience_level || "",
+          interests: existing?.interests ?? [],
+          linkedin_url: existing?.linkedin_url || "",
+          resume_url: existing?.resume_url || metaAvatar || "",
+        };
+
+        // Only overwrite store fields that are still empty — we don't want to
+        // wipe out anything the user just typed before this effect finishes.
+        setProfile({
+          ...(profile.full_name ? {} : { full_name: merged.full_name }),
+          ...(profile.skills.length ? {} : { skills: merged.skills }),
+          ...(profile.experience_level
+            ? {}
+            : { experience_level: merged.experience_level }),
+          ...(profile.interests.length ? {} : { interests: merged.interests }),
+          ...(profile.linkedin_url
+            ? {}
+            : { linkedin_url: merged.linkedin_url }),
+          ...(profile.resume_url ? {} : { resume_url: merged.resume_url }),
+        });
+
+        // Also make sure a row actually exists in the profiles table — the
+        // signup trigger should have done this automatically, but if it's
+        // missing for any reason (older account, trigger disabled, etc.)
+        // create it now so later UPDATEs don't fail.
+        if (!existing) {
+          await supabase.from("profiles").upsert(
+            {
+              id: user.id,
+              email: user.email,
+              full_name: metaName || null,
+            },
+            { onConflict: "id" }
+          );
+        }
+      } catch {
+        // Non-fatal — user can still fill the form manually.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleResumeUpload(file: File) {
     setUploading(true);
     setResumeFile(file.name);
@@ -197,6 +290,24 @@ export default function ProfilePage() {
       } = await supabase.auth.getUser();
 
       if (user) {
+        // Persist the profile to the profiles table so it's the user's
+        // canonical record (not just a snapshot inside a session).
+        await supabase.from("profiles").upsert(
+          {
+            id: user.id,
+            email: user.email,
+            full_name: profile.full_name,
+            skills: profile.skills,
+            experience_level: profile.experience_level,
+            interests: profile.interests,
+            linkedin_url: profile.linkedin_url || null,
+            resume_url: profile.resume_url || null,
+          },
+          { onConflict: "id" }
+        );
+
+        // Also create/update a session row so the rest of the onboarding
+        // flow has somewhere to attach ideas / prompts / marketers.
         const { data } = await supabase
           .from("sessions")
           .upsert({
