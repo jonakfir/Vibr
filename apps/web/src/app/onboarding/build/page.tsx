@@ -11,6 +11,7 @@ import {
   getFiles,
   readFile,
   openFolderPicker,
+  writeFile,
   connectTerminal,
   type FileNode,
 } from "@/lib/vibr-local";
@@ -22,6 +23,82 @@ type Provider = "anthropic" | "openai" | "gemini" | "custom";
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  // populated after streaming completes if any code blocks were written
+  // out to disk
+  writes?: WriteResult[];
+}
+
+interface WriteResult {
+  path: string;
+  ok: boolean;
+  error?: string;
+}
+
+/* Pulls (path, content) pairs out of a streamed assistant message.
+ *
+ * Looks for code fences preceded by a line that names a file path,
+ * either as a markdown heading, a backticked path, or a "Step N:
+ * Update `src/foo.ts`:" pattern. The path can also be embedded in the
+ * fence itself like ```ts:src/foo.ts. Returns one entry per detected
+ * file. Files without a detectable path are skipped — we never write
+ * arbitrary code into the user's project. */
+function extractFileBlocks(
+  text: string
+): { path: string; content: string }[] {
+  const out: { path: string; content: string }[] = [];
+  const lines = text.split("\n");
+  let i = 0;
+  let lastPathHint: string | null = null;
+  const pathRe = /([\w./\-_]+\.(?:tsx?|jsx?|css|scss|json|md|html|svg|ya?ml|toml|sh|env|gitignore|prisma|sql|py|rs|go))/i;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const fenceMatch = /^```([\w./\-_:]*)\s*$/.exec(line);
+    if (fenceMatch) {
+      // Look for path in the fence info string itself: ```ts:src/foo.ts
+      let path: string | null = null;
+      const info = fenceMatch[1];
+      if (info.includes(":")) {
+        const after = info.split(":").slice(1).join(":");
+        if (pathRe.test(after)) path = pathRe.exec(after)![1];
+      }
+      // Otherwise fall back to the most recent path hint we saw in
+      // the previous few lines of prose.
+      if (!path && lastPathHint) path = lastPathHint;
+
+      // Collect content until the closing fence
+      const buf: string[] = [];
+      i++;
+      while (i < lines.length && !/^```/.test(lines[i])) {
+        buf.push(lines[i]);
+        i++;
+      }
+      // Skip closing fence
+      if (i < lines.length) i++;
+
+      if (path) {
+        out.push({ path: path.trim(), content: buf.join("\n") });
+        lastPathHint = null;
+      }
+      continue;
+    }
+
+    // Capture path hints from prose. Prefer backticked paths.
+    const inline = /`([\w./\-_]+\.(?:tsx?|jsx?|css|scss|json|md|html|svg|ya?ml|toml|sh|env|gitignore|prisma|sql|py|rs|go))`/i.exec(
+      line
+    );
+    if (inline) {
+      lastPathHint = inline[1];
+    } else {
+      const bare = pathRe.exec(line);
+      if (bare && /update|create|add|edit|file/i.test(line)) {
+        lastPathHint = bare[1];
+      }
+    }
+
+    i++;
+  }
+  return out;
 }
 
 const DEFAULT_MODELS: Record<Provider, string> = {
@@ -441,6 +518,17 @@ export default function BuildPage() {
 
   const sendMessage = async () => {
     if (!input.trim() || streaming || !apiKey) return;
+    if (!connected) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Connect a project folder first — vibr needs read/write access so it can build the files for you on your own machine. Click \u201cOpen folder\u201d on the right.",
+        },
+      ]);
+      return;
+    }
 
     const userMsg: ChatMessage = { role: "user", content: input.trim() };
     const allMessages = [...messages, userMsg];
@@ -524,6 +612,41 @@ export default function BuildPage() {
           }
         }
       }
+
+      // Stream done — extract any code blocks that were tagged with a
+      // file path and write them to the connected folder so the user
+      // gets actual files on disk, not just text on the screen.
+      const blocks = extractFileBlocks(assistantContent);
+      if (blocks.length > 0) {
+        const writes: WriteResult[] = [];
+        for (const b of blocks) {
+          try {
+            await writeFile(b.path, b.content);
+            writes.push({ path: b.path, ok: true });
+          } catch (err) {
+            writes.push({
+              path: b.path,
+              ok: false,
+              error: err instanceof Error ? err.message : "write failed",
+            });
+          }
+        }
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            writes,
+          };
+          return updated;
+        });
+        // Refresh the file tree so newly-written files appear on the right.
+        try {
+          const tree = await getFiles();
+          setFiles(tree ?? []);
+        } catch {
+          /* ignore tree refresh failure */
+        }
+      }
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -588,7 +711,7 @@ export default function BuildPage() {
   return (
     <div className="flex flex-1 min-h-0 border-y border-border overflow-hidden">
       {/* ── LEFT PANEL ── */}
-      <div className="w-80 border-r border-border flex flex-col shrink-0">
+      <div className="w-80 border-r border-border flex flex-col shrink-0 min-h-0">
         <div className="flex-1 overflow-y-auto p-5">
           <p className="font-body text-[10px] uppercase tracking-wide text-muted mb-4">
             {flowMode === "import" ? "Project Context" : "Generated Prompt"}
@@ -691,16 +814,32 @@ export default function BuildPage() {
       </div>
 
       {/* ── CENTER PANEL ── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* messages */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {messages.length === 0 && (
-            <div className="flex items-center justify-center h-full">
-              <p className="font-body text-small text-muted">
-                {flowMode === "import"
-                  ? "Describe what you want to add, change, or fix in your project."
-                  : "Start coding by describing what you want to build."}
-              </p>
+            <div className="flex items-center justify-center h-full px-8">
+              <div className="text-center max-w-[420px]">
+                {!connected ? (
+                  <>
+                    <p className="font-body text-body text-foreground mb-2">
+                      Connect a project folder to begin.
+                    </p>
+                    <p className="font-body text-small text-muted leading-relaxed">
+                      Vibr writes the files it generates straight to disk on
+                      your machine. Click <strong>Open folder</strong> on the
+                      right and grant write access — the conversation
+                      unlocks once a folder is connected.
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-body text-small text-muted">
+                    {flowMode === "import"
+                      ? "Describe what you want to add, change, or fix in your project."
+                      : "Start coding by describing what you want to build."}
+                  </p>
+                )}
+              </div>
             </div>
           )}
           {messages.map((msg, i) => (
@@ -722,6 +861,33 @@ export default function BuildPage() {
                     ? renderMarkdown(msg.content)
                     : msg.content}
                 </div>
+                {msg.role === "assistant" &&
+                  msg.writes &&
+                  msg.writes.length > 0 && (
+                    <div className="mt-3 border border-border rounded-md bg-[#0a0a0a] divide-y divide-border">
+                      <div className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-muted">
+                        Files written
+                      </div>
+                      {msg.writes.map((w) => (
+                        <div
+                          key={w.path}
+                          className="px-3 py-1.5 flex items-center gap-2 font-mono text-[11px]"
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              w.ok ? "bg-emerald-400" : "bg-red-400"
+                            }`}
+                          />
+                          <span className="text-foreground">{w.path}</span>
+                          {!w.ok && w.error && (
+                            <span className="text-red-300/80 truncate">
+                              — {w.error}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           ))}
@@ -747,18 +913,20 @@ export default function BuildPage() {
               }
             }}
             placeholder={
-              apiKey
-                ? "Describe what you want to build..."
-                : "Enter an API key to start"
+              !apiKey
+                ? "Enter an API key on the left to start"
+                : !connected
+                  ? "Connect a project folder on the right first"
+                  : "Describe what you want to build…"
             }
-            disabled={!apiKey || streaming}
+            disabled={!apiKey || !connected || streaming}
             rows={2}
-            className="flex-1 bg-transparent font-body text-small text-foreground border-0 border-b border-border focus:border-foreground outline-none resize-none py-2 transition-colors duration-300"
+            className="flex-1 bg-transparent font-body text-small text-foreground border-0 border-b border-border focus:border-foreground outline-none resize-none py-2 transition-colors duration-300 disabled:opacity-50"
           />
           <button
             type="button"
             onClick={sendMessage}
-            disabled={!input.trim() || streaming || !apiKey}
+            disabled={!input.trim() || streaming || !apiKey || !connected}
             className="font-body text-xs text-muted hover:text-foreground disabled:opacity-30 transition-colors duration-300 pb-2"
           >
             Send
@@ -774,7 +942,7 @@ export default function BuildPage() {
       </div>
 
       {/* ── RIGHT PANEL ── */}
-      <div className="w-80 border-l border-border flex flex-col shrink-0">
+      <div className="w-80 border-l border-border flex flex-col shrink-0 min-h-0">
         <div className="p-5 border-b border-border">
           <div className="flex items-center justify-between mb-3">
             <p className="font-body text-[10px] uppercase tracking-wide text-muted">

@@ -33,10 +33,12 @@ export default function OnboardingLayout({
   const isFullScreen = pathname === "/onboarding/build";
 
   if (isFullScreen) {
+    // h-screen + overflow-hidden locks the page to one viewport so the
+    // chat panel scrolls internally instead of pushing the page taller
+    // as the assistant streams. The pt-24 makes room for the fixed nav.
     return (
-      <div className="bg-background min-h-screen flex flex-col">
-        {/* Push content below the fixed nav (~96px tall). */}
-        <div className="flex-1 flex flex-col pt-24">{children}</div>
+      <div className="bg-background h-screen overflow-hidden flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0 pt-24">{children}</div>
       </div>
     );
   }

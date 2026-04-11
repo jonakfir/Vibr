@@ -27,17 +27,34 @@ export interface FileNode {
 // We avoid pulling in DOM lib types for FileSystemDirectoryHandle so
 // this still compiles in older TS configs. The runtime API is the
 // real one — these aliases just keep the compiler happy.
+type Permission = "granted" | "denied" | "prompt";
 type DirHandle = {
   kind: "directory";
   name: string;
   values: () => AsyncIterableIterator<DirHandle | FileHandle>;
-  getDirectoryHandle: (name: string) => Promise<DirHandle>;
-  getFileHandle: (name: string) => Promise<FileHandle>;
+  getDirectoryHandle: (
+    name: string,
+    options?: { create?: boolean }
+  ) => Promise<DirHandle>;
+  getFileHandle: (
+    name: string,
+    options?: { create?: boolean }
+  ) => Promise<FileHandle>;
+  queryPermission?: (opts: {
+    mode: "read" | "readwrite";
+  }) => Promise<Permission>;
+  requestPermission?: (opts: {
+    mode: "read" | "readwrite";
+  }) => Promise<Permission>;
 };
 type FileHandle = {
   kind: "file";
   name: string;
   getFile: () => Promise<File>;
+  createWritable: () => Promise<{
+    write: (data: string | Blob) => Promise<void>;
+    close: () => Promise<void>;
+  }>;
 };
 
 let rootHandle: DirHandle | null = null;
@@ -75,7 +92,9 @@ export async function checkConnection(): Promise<boolean> {
   return rootHandle !== null;
 }
 
-/** Open the native folder picker and remember the chosen handle. */
+/** Open the native folder picker and remember the chosen handle.
+ *  Always requests "readwrite" so vibr can create + edit files in the
+ *  folder. The browser shows the permission prompt automatically. */
 export async function openFolderPicker(): Promise<string> {
   if (!isFsApiSupported()) {
     throw new Error(
@@ -89,7 +108,19 @@ export async function openFolderPicker(): Promise<string> {
           mode?: "read" | "readwrite";
         }) => Promise<DirHandle>;
       }
-    ).showDirectoryPicker({ mode: "read" })) as DirHandle;
+    ).showDirectoryPicker({ mode: "readwrite" })) as DirHandle;
+
+    // Force a write-permission prompt up front. Some browsers grant
+    // read on pick but require an explicit request for write.
+    if (handle.requestPermission) {
+      const perm = await handle.requestPermission({ mode: "readwrite" });
+      if (perm !== "granted") {
+        throw new Error(
+          "Vibr needs write access to this folder so it can create files for you. Please grant write permission and try again."
+        );
+      }
+    }
+
     rootHandle = handle;
     rootName = handle.name;
     notify();
@@ -101,6 +132,44 @@ export async function openFolderPicker(): Promise<string> {
     }
     throw err;
   }
+}
+
+/** True iff a folder is connected with write permission. */
+export async function ensureWritePermission(): Promise<boolean> {
+  if (!rootHandle) return false;
+  if (!rootHandle.queryPermission || !rootHandle.requestPermission) return true;
+  let perm = await rootHandle.queryPermission({ mode: "readwrite" });
+  if (perm === "granted") return true;
+  perm = await rootHandle.requestPermission({ mode: "readwrite" });
+  return perm === "granted";
+}
+
+/** Write a file at a slash-joined relative path. Creates intermediate
+ *  directories. Returns the path on success, throws on failure. */
+export async function writeFile(
+  path: string,
+  contents: string
+): Promise<string> {
+  if (!rootHandle) {
+    throw new Error("No folder connected. Open a folder first.");
+  }
+  const ok = await ensureWritePermission();
+  if (!ok) {
+    throw new Error("Write permission denied.");
+  }
+  const segments = path.split("/").filter(Boolean);
+  if (segments.length === 0) throw new Error("Empty path");
+  let dir: DirHandle = rootHandle;
+  for (let i = 0; i < segments.length - 1; i++) {
+    dir = await dir.getDirectoryHandle(segments[i], { create: true });
+  }
+  const fileHandle = await dir.getFileHandle(segments[segments.length - 1], {
+    create: true,
+  });
+  const writable = await fileHandle.createWritable();
+  await writable.write(contents);
+  await writable.close();
+  return path;
 }
 
 /** Walk the picked folder and return a tree (max depth 6). */
