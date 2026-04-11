@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const TOTAL_FRAMES = 240;
+const TOTAL_FRAMES = 64;
 const FRAME_PATH = (i: number) =>
-  `/hero-frames/frame_${String(i).padStart(4, "0")}.webp`;
+  `/hero-frames/frame_${String(i).padStart(4, "0")}.jpg`;
 
-// How "tall" the scroll track is, as a multiple of viewport height.
-// 3× viewport = about 3 full scrolls to play the whole sequence.
-const TRACK_VH = 300;
+// Scroll track height: 220vh on mobile, 300vh on desktop, set via Tailwind
+// classes on the outer section. Mobile gets a shorter track so the scrub
+// doesn't feel endless on a phone.
 
 export default function ScrollReveal() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -149,13 +149,14 @@ export default function ScrollReveal() {
   if (firstFrameMissing) return null;
 
   const loadProgress = Math.round((loadedCount / TOTAL_FRAMES) * 100);
-  const ready = loadedCount >= Math.min(30, TOTAL_FRAMES); // show after first 30 decode
+  // Show as soon as ~25% of frames are decoded — gets the canvas painted fast
+  // and the rest stream in behind it.
+  const ready = loadedCount >= Math.max(8, Math.floor(TOTAL_FRAMES * 0.25));
 
   return (
     <section
       ref={sectionRef}
-      className="relative w-full"
-      style={{ height: `${TRACK_VH}vh` }}
+      className="relative w-full h-[220vh] md:h-[300vh]"
       aria-label="Product reveal"
     >
       <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden">

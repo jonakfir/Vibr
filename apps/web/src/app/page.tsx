@@ -1,5 +1,5 @@
 import Hero from "@/components/landing/hero";
-import ScrollReveal from "@/components/landing/scroll-reveal";
+import ScrollReveal from "@/components/landing/scroll-reveal-frames";
 import WhatItIs from "@/components/landing/what-it-is";
 import StepsSection from "@/components/landing/steps-section";
 import IdeasShowcase from "@/components/landing/ideas-showcase";
