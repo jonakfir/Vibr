@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/ui/nav";
-import Footer from "@/components/ui/footer";
+import ConditionalFooter from "@/components/ui/conditional-footer";
 
 export const metadata: Metadata = {
   title: "Vibr — Build it. Ship it. Find someone to sell it.",
@@ -49,7 +49,7 @@ export default function RootLayout({
       <body className="bg-background font-body text-foreground antialiased">
         <Nav />
         {children}
-        <Footer />
+        <ConditionalFooter />
       </body>
     </html>
   );

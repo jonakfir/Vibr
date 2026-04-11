@@ -31,56 +31,164 @@ const DEFAULT_MODELS: Record<Provider, string> = {
   custom: "gpt-4o",
 };
 
-/* ─── tiny markdown renderer ─── */
+/* ─── markdown renderer ───
+   Streaming-aware: walks the text manually so an unclosed ``` fence at
+   the end (very common while the assistant is mid-stream) still gets
+   rendered as code instead of dumped as raw prose.
+
+   Escapes HTML inside code blocks so things like `<div>` show literally
+   instead of being parsed by the browser. Inline `code`, **bold**, and
+   *italic* are supported in prose. Lines starting with "- " become
+   bullet points. Lines starting with "# " become headings. */
+
+type MdPart =
+  | { kind: "prose"; text: string }
+  | { kind: "code"; lang: string; text: string; closed: boolean };
+
+function parseMarkdown(text: string): MdPart[] {
+  const parts: MdPart[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const fence = text.indexOf("```", i);
+    if (fence === -1) {
+      if (i < text.length) parts.push({ kind: "prose", text: text.slice(i) });
+      break;
+    }
+    if (fence > i) parts.push({ kind: "prose", text: text.slice(i, fence) });
+
+    // language up to the next newline
+    const langEnd = text.indexOf("\n", fence + 3);
+    if (langEnd === -1) {
+      // fence with no newline yet — render as empty in-progress code block
+      parts.push({
+        kind: "code",
+        lang: text.slice(fence + 3),
+        text: "",
+        closed: false,
+      });
+      break;
+    }
+    const lang = text.slice(fence + 3, langEnd).trim();
+    const close = text.indexOf("```", langEnd + 1);
+    if (close === -1) {
+      // unterminated → render whatever we have so far as code
+      parts.push({
+        kind: "code",
+        lang,
+        text: text.slice(langEnd + 1),
+        closed: false,
+      });
+      break;
+    }
+    parts.push({
+      kind: "code",
+      lang,
+      text: text.slice(langEnd + 1, close),
+      closed: true,
+    });
+    i = close + 3;
+    // skip a single trailing newline so the gap to the next prose block
+    // looks tight, like a chat message in an IDE
+    if (text[i] === "\n") i++;
+  }
+  return parts;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function renderProseLine(line: string, key: string): React.ReactNode {
+  // headings
+  const h = /^(#{1,3})\s+(.*)$/.exec(line);
+  if (h) {
+    const level = h[1].length;
+    const cls =
+      level === 1
+        ? "font-heading text-foreground text-[18px] mt-4 mb-2"
+        : level === 2
+          ? "font-heading text-foreground text-[16px] mt-3 mb-1.5"
+          : "font-heading text-foreground text-[14px] mt-2 mb-1";
+    return (
+      <div
+        key={key}
+        className={cls}
+        dangerouslySetInnerHTML={{ __html: inlineFormat(h[2]) }}
+      />
+    );
+  }
+  // bullet
+  if (/^[-*]\s+/.test(line)) {
+    return (
+      <div key={key} className="flex gap-2 ml-1">
+        <span className="text-muted">&bull;</span>
+        <span dangerouslySetInnerHTML={{ __html: inlineFormat(line.slice(2)) }} />
+      </div>
+    );
+  }
+  if (line.trim() === "") {
+    return <div key={key} className="h-2" />;
+  }
+  return (
+    <div
+      key={key}
+      dangerouslySetInnerHTML={{ __html: inlineFormat(line) }}
+    />
+  );
+}
+
+function inlineFormat(line: string): string {
+  // Order matters — code first so its contents aren't touched by **/*.
+  return escapeHtml(line)
+    .replace(
+      /`([^`]+)`/g,
+      '<code class="bg-[#0d0d0d] text-foreground px-1.5 py-0.5 text-[12px] font-mono border border-border rounded">$1</code>'
+    )
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-foreground">$1</strong>')
+    .replace(/\*(.+?)\*/g, "<em>$1</em>");
+}
 
 function renderMarkdown(text: string) {
-  const blocks = text.split(/```(\w*)\n([\s\S]*?)```/g);
-  const elements: React.ReactNode[] = [];
-
-  for (let i = 0; i < blocks.length; i++) {
-    if (i % 3 === 0) {
-      // prose
-      const lines = blocks[i].split("\n");
-      const parsed = lines.map((line, li) => {
-        let html = line
-          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-          .replace(/\*(.*?)\*/g, "<em>$1</em>")
-          .replace(/`([^`]+)`/g, '<code class="bg-[#0a0a0a] px-1 py-0.5 text-xs font-mono border border-border rounded">$1</code>');
-
-        if (/^[-*]\s/.test(line)) {
-          html = `<span class="ml-4 block">&bull; ${html.slice(2)}</span>`;
+  const parts = parseMarkdown(text);
+  return (
+    <div className="space-y-2 leading-relaxed">
+      {parts.map((part, i) => {
+        if (part.kind === "prose") {
+          const lines = part.text.split("\n");
+          return (
+            <div key={`p-${i}`}>
+              {lines.map((line, li) =>
+                renderProseLine(line, `p-${i}-${li}`)
+              )}
+            </div>
+          );
         }
-
         return (
-          <span key={`${i}-${li}`} dangerouslySetInnerHTML={{ __html: html }} />
+          <div
+            key={`c-${i}`}
+            className="my-3 border border-border rounded-md overflow-hidden bg-[#0a0a0a]"
+          >
+            <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-[#0d0d0d]">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                {part.lang || "code"}
+              </span>
+              {!part.closed && (
+                <span className="font-mono text-[10px] text-muted/60 animate-pulse">
+                  streaming…
+                </span>
+              )}
+            </div>
+            <pre className="overflow-x-auto px-4 py-3 font-mono text-[12px] leading-[1.55] text-foreground/90">
+              <code>{part.text}</code>
+            </pre>
+          </div>
         );
-      });
-      elements.push(
-        <span key={`block-${i}`}>
-          {parsed.map((p, pi) => (
-            <span key={pi}>
-              {p}
-              {pi < parsed.length - 1 && <br />}
-            </span>
-          ))}
-        </span>
-      );
-    } else if (i % 3 === 1) {
-      // language tag — skip
-    } else {
-      // code content
-      elements.push(
-        <pre
-          key={`code-${i}`}
-          className="bg-[#0a0a0a] border border-border rounded p-3 my-2 overflow-x-auto font-mono text-xs leading-relaxed"
-        >
-          <code>{blocks[i]}</code>
-        </pre>
-      );
-    }
-  }
-
-  return <>{elements}</>;
+      })}
+    </div>
+  );
 }
 
 /* ─── file tree component ─── */
@@ -219,6 +327,8 @@ export default function BuildPage() {
 
   /* right panel */
   const [connected, setConnected] = useState(false);
+  const [folderName, setFolderName] = useState<string | null>(null);
+  const [folderError, setFolderError] = useState<string | null>(null);
   const [files, setFiles] = useState<FileNode[]>([]);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [fileModalPath, setFileModalPath] = useState<string | null>(null);
@@ -452,9 +562,20 @@ export default function BuildPage() {
   /* ── open folder ── */
 
   const handleOpenFolder = async () => {
-    await openFolderPicker();
-    const tree = await getFiles();
-    if (tree) setFiles(tree);
+    setFolderError(null);
+    try {
+      const name = await openFolderPicker();
+      if (!name) return; // user cancelled
+      const tree = await getFiles();
+      setFiles(tree ?? []);
+      setConnected(true);
+      setFolderName(name);
+    } catch (err) {
+      setFolderError(
+        err instanceof Error ? err.message : "Couldn't open folder."
+      );
+      setConnected(false);
+    }
   };
 
   const providers: { key: Provider; label: string }[] = [
@@ -465,7 +586,7 @@ export default function BuildPage() {
   ];
 
   return (
-    <div className="flex h-[calc(100vh-140px)] border border-border rounded-[4px] overflow-hidden">
+    <div className="flex flex-1 min-h-0 border-y border-border overflow-hidden">
       {/* ── LEFT PANEL ── */}
       <div className="w-80 border-r border-border flex flex-col shrink-0">
         <div className="flex-1 overflow-y-auto p-5">
@@ -662,21 +783,26 @@ export default function BuildPage() {
             <div className="flex items-center gap-1.5">
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  connected ? "bg-green-500" : "bg-red-500"
+                  connected ? "bg-green-500" : "bg-muted/40"
                 }`}
               />
               <span className="font-body text-xs text-muted">
-                {connected ? "Connected" : "Disconnected"}
+                {connected ? folderName || "Connected" : "No folder"}
               </span>
             </div>
           </div>
           <button
             type="button"
             onClick={handleOpenFolder}
-            className="font-body text-xs text-muted hover:text-foreground transition-colors duration-300"
+            className="font-body text-xs text-foreground hover:text-accent transition-colors duration-300 underline underline-offset-4 decoration-border"
           >
-            Open folder
+            {connected ? "Pick a different folder" : "Open folder"}
           </button>
+          {folderError && (
+            <p className="mt-3 font-body text-[11px] text-red-400 leading-relaxed">
+              {folderError}
+            </p>
+          )}
         </div>
 
         {/* file tree */}
@@ -684,10 +810,10 @@ export default function BuildPage() {
           {files.length > 0 ? (
             <FileTree nodes={files} onFileClick={handleFileClick} />
           ) : (
-            <p className="font-body text-xs text-muted px-2">
+            <p className="font-body text-xs text-muted px-2 leading-relaxed">
               {connected
-                ? "No files loaded. Open a folder to begin."
-                : "Connect vibr-local to browse files."}
+                ? "No files loaded. Pick a folder to begin."
+                : "Click \u201cOpen folder\u201d to grant the IDE read access to a project on your machine."}
             </p>
           )}
         </div>

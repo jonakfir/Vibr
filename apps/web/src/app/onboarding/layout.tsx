@@ -27,6 +27,20 @@ export default function OnboardingLayout({
     setStep(current.step);
   }, [current.step, setStep]);
 
+  // The IDE / build page is full-screen by design — no step indicator,
+  // no extra padding, no footer (the root layout handles that). It
+  // wants every available pixel under the nav.
+  const isFullScreen = pathname === "/onboarding/build";
+
+  if (isFullScreen) {
+    return (
+      <div className="bg-background min-h-screen flex flex-col">
+        {/* Push content below the fixed nav (~96px tall). */}
+        <div className="flex-1 flex flex-col pt-24">{children}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-[960px] mx-auto px-6 pt-12 pb-6">
