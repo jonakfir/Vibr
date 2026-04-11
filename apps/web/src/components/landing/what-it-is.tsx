@@ -4,7 +4,7 @@ import { FadeInOnScroll } from "./motion-utils";
 
 export default function WhatItIs() {
   return (
-    <section className="w-full py-32 border-t border-white/[0.06]">
+    <section className="w-full py-32 border-t border-white/[0.06] bg-background/85 backdrop-blur-sm">
       <div className="max-w-[1200px] mx-auto px-6">
         <FadeInOnScroll>
           <h2 className="font-heading font-light text-title text-foreground">

@@ -41,7 +41,7 @@ export default function CodingInterface() {
   }, [isInView]);
 
   return (
-    <section className="relative py-32 bg-background/70">
+    <section className="relative py-32 bg-background/85 backdrop-blur-sm">
       {/* Ambient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(120,180,255,0.04),transparent_70%)] pointer-events-none" />
 

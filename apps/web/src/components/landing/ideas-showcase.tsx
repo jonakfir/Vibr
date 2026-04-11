@@ -32,7 +32,7 @@ const ideas = [
 
 export default function IdeasShowcase() {
   return (
-    <section className="relative py-32 bg-background/70">
+    <section className="relative py-32 bg-background/85 backdrop-blur-sm">
       <div className="max-w-[1200px] mx-auto px-6">
         <FadeInOnScroll>
           <h2 className="font-heading font-light text-display text-foreground">

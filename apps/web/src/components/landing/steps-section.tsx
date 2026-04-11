@@ -28,7 +28,7 @@ const steps = [
 
 export default function StepsSection() {
   return (
-    <section className="w-full py-32">
+    <section className="w-full py-32 bg-background/85 backdrop-blur-sm">
       <div className="max-w-[1200px] mx-auto px-6">
         <StaggerChildren className="divide-y divide-white/[0.06]">
           {steps.map((step) => (
