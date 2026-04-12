@@ -13,3 +13,24 @@
     @apply bg-accent text-foreground;
   }
 }
+
+/* ── Syntax highlighting (used by the IDE code blocks and diff views) ──
+   Minimal token classes produced by src/app/onboarding/build/highlight.ts.
+   Colors match a muted Claude-Code-ish palette. */
+.hl-comment  { color: #6b6b6b; font-style: italic; }
+.hl-string   { color: #c3a267; }
+.hl-number   { color: #d19a66; }
+.hl-keyword  { color: #b392f0; }
+.hl-type     { color: #4ec9b0; }
+.hl-builtin  { color: #569cd6; }
+.hl-fn       { color: #dcdcaa; }
+.hl-regex    { color: #d16969; }
+.hl-tag      { color: #569cd6; }
+.hl-attr     { color: #92c5f8; }
+.hl-punct    { color: #d4d4d4; }
+
+/* Diff view line backgrounds */
+.diff-add    { background: rgba(52, 199, 89, 0.10); }
+.diff-remove { background: rgba(255, 69, 58, 0.10); }
+.diff-add-mark    { color: #4ade80; }
+.diff-remove-mark { color: #f87171; }

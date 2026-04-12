@@ -225,6 +225,62 @@ async function walk(
   return out;
 }
 
+/** Collect a flat list of file paths, up to a hard cap. Used to build
+ *  repo context for the model — we want the tree shape, not raw file
+ *  bytes. Directories like node_modules are already skipped by walk(). */
+export async function listAllPaths(cap = 300): Promise<string[]> {
+  if (!rootHandle) return [];
+  const tree = await walk(rootHandle, "", 0);
+  const out: string[] = [];
+  const visit = (nodes: FileNode[]) => {
+    for (const n of nodes) {
+      if (out.length >= cap) return;
+      if (n.type === "directory") {
+        if (n.children) visit(n.children);
+      } else {
+        out.push(n.path);
+      }
+    }
+  };
+  visit(tree);
+  return out;
+}
+
+/** Check if a file exists (used for diff previews). */
+export async function fileExists(path: string): Promise<boolean> {
+  if (!rootHandle) return false;
+  try {
+    const segments = path.split("/").filter(Boolean);
+    let dir: DirHandle = rootHandle;
+    for (let i = 0; i < segments.length - 1; i++) {
+      dir = await dir.getDirectoryHandle(segments[i]);
+    }
+    await dir.getFileHandle(segments[segments.length - 1]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Read a file and return "" (instead of an error marker) if it doesn't
+ *  exist. Used for diff previews where a missing old file means "new
+ *  file, all lines are additions". */
+export async function readFileOrEmpty(path: string): Promise<string> {
+  if (!rootHandle) return "";
+  try {
+    const segments = path.split("/").filter(Boolean);
+    let dir: DirHandle = rootHandle;
+    for (let i = 0; i < segments.length - 1; i++) {
+      dir = await dir.getDirectoryHandle(segments[i]);
+    }
+    const fileHandle = await dir.getFileHandle(segments[segments.length - 1]);
+    const file = await fileHandle.getFile();
+    return await file.text();
+  } catch {
+    return "";
+  }
+}
+
 /** Read a file by its slash-joined path relative to the picked folder. */
 export async function readFile(path: string): Promise<string> {
   if (!rootHandle) return "";

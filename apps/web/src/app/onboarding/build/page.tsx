@@ -10,11 +10,15 @@ import {
   checkConnection,
   getFiles,
   readFile,
+  readFileOrEmpty,
+  listAllPaths,
   openFolderPicker,
   writeFile,
   connectTerminal,
   type FileNode,
 } from "@/lib/vibr-local";
+import { DiffModal, type PendingWrite } from "./diff-modal";
+import { highlight, langFromPath } from "./highlight";
 
 /* ─── types ─── */
 
@@ -333,7 +337,11 @@ function CodeBlock({
           aria-label={label}
           className="overflow-x-auto px-4 py-3 font-mono text-[12px] leading-[1.55] text-foreground/90 border-t border-border"
         >
-          <code>{text}</code>
+          <code
+            dangerouslySetInnerHTML={{
+              __html: highlight(text, lang || (path ? langFromPath(path) : "")),
+            }}
+          />
         </pre>
       )}
     </div>
@@ -512,6 +520,21 @@ export default function BuildPage() {
   const [files, setFiles] = useState<FileNode[]>([]);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [fileModalPath, setFileModalPath] = useState<string | null>(null);
+
+  /* ── diff review + undo ──
+     After a streamed assistant message contains file blocks, we never
+     blindly write them anymore — we stash them in `pendingWrites`,
+     show the DiffModal, and only write the subset the user approves.
+     Every successful write also pushes the old contents onto an
+     undo stack so the user can roll back the last batch. */
+  const [pendingWrites, setPendingWrites] = useState<PendingWrite[] | null>(
+    null
+  );
+  // A single entry holds everything written by one approval batch so
+  // "Undo" rolls back a whole turn, not just one file.
+  type UndoBatch = { files: { path: string; oldContent: string; isNew: boolean }[] };
+  const [undoStack, setUndoStack] = useState<UndoBatch[]>([]);
+  const [undoing, setUndoing] = useState(false);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const terminalRef = useRef<HTMLDivElement>(null);
 
@@ -673,6 +696,102 @@ export default function BuildPage() {
     }
   };
 
+  /* ── diff review handlers ── */
+
+  const handleApplyWrites = async (selectedPaths: string[]) => {
+    if (!pendingWrites) return;
+    const selected = pendingWrites.filter((w) => selectedPaths.includes(w.path));
+    setPendingWrites(null);
+
+    const writes: WriteResult[] = [];
+    const undoEntry: UndoBatch = { files: [] };
+
+    for (const w of selected) {
+      try {
+        await writeFile(w.path, w.newContent);
+        writes.push({ path: w.path, ok: true });
+        undoEntry.files.push({
+          path: w.path,
+          oldContent: w.oldContent,
+          isNew: w.isNew,
+        });
+      } catch (err) {
+        writes.push({
+          path: w.path,
+          ok: false,
+          error: err instanceof Error ? err.message : "write failed",
+        });
+      }
+    }
+
+    // Attach the write results to the last assistant message so they
+    // show up as a "Files written" panel under it.
+    setMessages((prev) => {
+      if (prev.length === 0) return prev;
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last.role === "assistant") {
+        updated[updated.length - 1] = { ...last, writes };
+      }
+      return updated;
+    });
+
+    // Push the undo entry AFTER attaching writes so the button shows up.
+    if (undoEntry.files.length > 0) {
+      setUndoStack((prev) => [...prev, undoEntry].slice(-20));
+    }
+
+    // Refresh the file tree so newly-written files appear on the right.
+    try {
+      const tree = await getFiles();
+      setFiles(tree ?? []);
+    } catch {
+      /* ignore tree refresh failure */
+    }
+  };
+
+  const handleRejectWrites = () => {
+    setPendingWrites(null);
+    // Tell the user — but gently. No assistant message, just a toast-y
+    // footnote on the last message.
+    setMessages((prev) => {
+      if (prev.length === 0) return prev;
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last.role === "assistant") {
+        updated[updated.length - 1] = {
+          ...last,
+          writes: [{ path: "(changes rejected)", ok: false, error: "nothing written" }],
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleUndo = async () => {
+    const last = undoStack[undoStack.length - 1];
+    if (!last) return;
+    setUndoing(true);
+    try {
+      for (const f of last.files) {
+        // If the file was newly created by vibr, rolling back means
+        // restoring empty contents. We can't actually delete from the
+        // File System Access API without a separate remove permission,
+        // so we blank it out. Not perfect, but safe.
+        await writeFile(f.path, f.oldContent);
+      }
+      setUndoStack((prev) => prev.slice(0, -1));
+      try {
+        const tree = await getFiles();
+        setFiles(tree ?? []);
+      } catch {
+        /* ignore */
+      }
+    } finally {
+      setUndoing(false);
+    }
+  };
+
   useEffect(() => {
     terminalRef.current?.scrollTo(0, terminalRef.current.scrollHeight);
   }, [terminalOutput]);
@@ -709,16 +828,68 @@ export default function BuildPage() {
       return;
     }
 
-    const userMsg: ChatMessage = { role: "user", content: input.trim() };
+    // Build a repo-context preamble for the FIRST user message in the
+    // conversation. This gives the model the file tree + the contents
+    // of key config files (package.json, tsconfig, README) so it can
+    // write code that fits the project instead of hallucinating the
+    // structure. We send this to the API only — the UI still shows
+    // the user's short typed message, not the 5KB context dump.
+    let apiUserContent = input.trim();
+    const displayUserContent = input.trim();
+    if (messages.length === 0) {
+      try {
+        const paths = await listAllPaths(300);
+        if (paths.length > 0) {
+          const tree = paths.map((p) => `- ${p}`).join("\n");
+          const keyFiles = [
+            "package.json",
+            "tsconfig.json",
+            "next.config.js",
+            "next.config.mjs",
+            "tailwind.config.ts",
+            "tailwind.config.js",
+            "README.md",
+          ];
+          const snippets: string[] = [];
+          for (const key of keyFiles) {
+            if (!paths.includes(key)) continue;
+            const content = await readFileOrEmpty(key);
+            if (content && content.length < 4000) {
+              snippets.push(`\n### \`${key}\`\n\n\`\`\`\n${content}\n\`\`\``);
+            }
+          }
+          const contextBlock = `## Project context
+
+I'm working in a folder called "${folderName || "project"}" with ${paths.length} files. Here is the file tree:
+
+${tree}
+${snippets.length > 0 ? `\n### Key files\n${snippets.join("\n")}\n` : ""}
+---
+
+My request:
+
+`;
+          apiUserContent = contextBlock + input.trim();
+        }
+      } catch {
+        /* non-fatal — send the message without repo context */
+      }
+    }
+
+    // The displayed user message in the chat uses the short content;
+    // the API call uses the context-enriched content for turn 1.
+    const userMsg: ChatMessage = { role: "user", content: displayUserContent };
     const allMessages = [...messages, userMsg];
 
-    // The first message in the conversation is now pre-filled with the
-    // generated starter prompt itself, so we don't need to prepend it
-    // again. Just send the conversation as-is.
-    const apiMessages = allMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    const apiMessages: { role: "user" | "assistant"; content: string }[] = [];
+    for (let idx = 0; idx < allMessages.length; idx++) {
+      const m = allMessages[idx];
+      if (idx === allMessages.length - 1 && m.role === "user") {
+        apiMessages.push({ role: "user", content: apiUserContent });
+      } else {
+        apiMessages.push({ role: m.role, content: m.content });
+      }
+    }
 
     setMessages(allMessages);
     setInput("");
@@ -793,38 +964,32 @@ export default function BuildPage() {
       }
 
       // Stream done — extract any code blocks that were tagged with a
-      // file path and write them to the connected folder so the user
-      // gets actual files on disk, not just text on the screen.
+      // file path. Instead of writing them immediately, stage them in
+      // `pendingWrites` so the DiffModal can show the diff and the
+      // user can approve or reject each file before anything hits
+      // disk. Only on approval will we call writeFile().
       const blocks = extractFileBlocks(assistantContent);
       if (blocks.length > 0) {
-        const writes: WriteResult[] = [];
+        const staged: PendingWrite[] = [];
         for (const b of blocks) {
           try {
-            await writeFile(b.path, b.content);
-            writes.push({ path: b.path, ok: true });
-          } catch (err) {
-            writes.push({
+            const existing = await readFileOrEmpty(b.path);
+            staged.push({
               path: b.path,
-              ok: false,
-              error: err instanceof Error ? err.message : "write failed",
+              oldContent: existing,
+              newContent: b.content,
+              isNew: existing.length === 0,
+            });
+          } catch {
+            staged.push({
+              path: b.path,
+              oldContent: "",
+              newContent: b.content,
+              isNew: true,
             });
           }
         }
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...updated[updated.length - 1],
-            writes,
-          };
-          return updated;
-        });
-        // Refresh the file tree so newly-written files appear on the right.
-        try {
-          const tree = await getFiles();
-          setFiles(tree ?? []);
-        } catch {
-          /* ignore tree refresh failure */
-        }
+        setPendingWrites(staged);
       }
     } catch (err) {
       setMessages((prev) => [
@@ -1006,15 +1171,28 @@ export default function BuildPage() {
                 "New project"}
             </span>
           </div>
-          {messages.length > 0 && (
-            <button
-              type="button"
-              onClick={clearChat}
-              className="font-body text-[11px] uppercase tracking-[0.15em] text-muted hover:text-foreground transition-colors shrink-0"
-            >
-              Clear chat
-            </button>
-          )}
+          <div className="flex items-center gap-5 shrink-0">
+            {undoStack.length > 0 && (
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={undoing}
+                className="font-body text-[11px] uppercase tracking-[0.15em] text-muted hover:text-foreground transition-colors disabled:opacity-30"
+                title="Undo the last accepted batch of writes"
+              >
+                {undoing ? "Undoing\u2026" : `Undo (${undoStack.length})`}
+              </button>
+            )}
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={clearChat}
+                className="font-body text-[11px] uppercase tracking-[0.15em] text-muted hover:text-foreground transition-colors"
+              >
+                Clear chat
+              </button>
+            )}
+          </div>
         </div>
 
         {/* messages */}
@@ -1286,6 +1464,15 @@ export default function BuildPage() {
           </div>
         </div>
       </div>
+
+      {/* ── DIFF REVIEW MODAL ── */}
+      {pendingWrites && pendingWrites.length > 0 && (
+        <DiffModal
+          writes={pendingWrites}
+          onApply={handleApplyWrites}
+          onCancel={handleRejectWrites}
+        />
+      )}
 
       {/* ── FILE CONTENT MODAL ── */}
       <AnimatePresence>
