@@ -19,18 +19,22 @@ import {
 } from "@/lib/vibr-local";
 import { DiffModal, type PendingWrite } from "./diff-modal";
 import { highlight, langFromPath } from "./highlight";
+import {
+  runAgentLoop,
+  type ChatMessage as AgentChatMessage,
+  type ContentBlock,
+} from "./agent";
 
 /* ─── types ─── */
 
 type Provider = "anthropic" | "openai" | "gemini" | "custom";
 
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-  // populated after streaming completes if any code blocks were written
-  // out to disk
-  writes?: WriteResult[];
-}
+/**
+ * Local chat message type. Extends AgentChatMessage (which supports
+ * content arrays for tool_use / tool_result blocks) with the UI-only
+ * `writes` annotation that we show under each assistant message.
+ */
+type ChatMessage = AgentChatMessage;
 
 interface WriteResult {
   path: string;
@@ -46,6 +50,9 @@ interface WriteResult {
  * fence itself like ```ts:src/foo.ts. Returns one entry per detected
  * file. Files without a detectable path are skipped — we never write
  * arbitrary code into the user's project. */
+// Retained for the legacy (non-Anthropic) provider path, where the
+// model still emits fenced code blocks instead of tool_use calls.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function extractFileBlocks(
   text: string
 ): { path: string; content: string }[] {
@@ -535,6 +542,22 @@ export default function BuildPage() {
   type UndoBatch = { files: { path: string; oldContent: string; isNew: boolean }[] };
   const [undoStack, setUndoStack] = useState<UndoBatch[]>([]);
   const [undoing, setUndoing] = useState(false);
+
+  // The agent loop stages writes and waits (via this ref) for the
+  // DiffModal to resolve with the user's approval decision. The
+  // modal callbacks (handleApplyWrites / handleRejectWrites) look
+  // at this ref and, if set, resolve the promise with the write
+  // results instead of using the legacy direct-write path.
+  const writesResolverRef = useRef<
+    ((r: { path: string; ok: boolean; error?: string }[]) => void) | null
+  >(null);
+
+  // Used by the agent's run_check tool. When the model asks for an
+  // error report, we prompt the user inline and their response is
+  // passed back via this ref.
+  const runCheckResolverRef = useRef<((s: string) => void) | null>(null);
+  const [runCheckPrompt, setRunCheckPrompt] = useState<string | null>(null);
+  const [runCheckInput, setRunCheckInput] = useState("");
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
   const terminalRef = useRef<HTMLDivElement>(null);
 
@@ -724,18 +747,6 @@ export default function BuildPage() {
       }
     }
 
-    // Attach the write results to the last assistant message so they
-    // show up as a "Files written" panel under it.
-    setMessages((prev) => {
-      if (prev.length === 0) return prev;
-      const updated = [...prev];
-      const last = updated[updated.length - 1];
-      if (last.role === "assistant") {
-        updated[updated.length - 1] = { ...last, writes };
-      }
-      return updated;
-    });
-
     // Push the undo entry AFTER attaching writes so the button shows up.
     if (undoEntry.files.length > 0) {
       setUndoStack((prev) => [...prev, undoEntry].slice(-20));
@@ -748,12 +759,41 @@ export default function BuildPage() {
     } catch {
       /* ignore tree refresh failure */
     }
+
+    // If the agent loop is waiting on the result, resolve its
+    // promise so it can feed the outcome back into the next turn.
+    // Otherwise fall back to the legacy path of attaching the
+    // writes array directly to the last assistant message.
+    const resolver = writesResolverRef.current;
+    if (resolver) {
+      writesResolverRef.current = null;
+      resolver(writes);
+    } else {
+      setMessages((prev) => {
+        if (prev.length === 0) return prev;
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last.role === "assistant") {
+          updated[updated.length - 1] = { ...last, writes };
+        }
+        return updated;
+      });
+    }
   };
 
   const handleRejectWrites = () => {
     setPendingWrites(null);
-    // Tell the user — but gently. No assistant message, just a toast-y
-    // footnote on the last message.
+    const rejected: WriteResult[] = [
+      { path: "(changes rejected)", ok: false, error: "nothing written" },
+    ];
+
+    const resolver = writesResolverRef.current;
+    if (resolver) {
+      writesResolverRef.current = null;
+      resolver(rejected);
+      return;
+    }
+
     setMessages((prev) => {
       if (prev.length === 0) return prev;
       const updated = [...prev];
@@ -761,7 +801,7 @@ export default function BuildPage() {
       if (last.role === "assistant") {
         updated[updated.length - 1] = {
           ...last,
-          writes: [{ path: "(changes rejected)", ok: false, error: "nothing written" }],
+          writes: rejected,
         };
       }
       return updated;
@@ -828,14 +868,10 @@ export default function BuildPage() {
       return;
     }
 
-    // Build a repo-context preamble for the FIRST user message in the
-    // conversation. This gives the model the file tree + the contents
-    // of key config files (package.json, tsconfig, README) so it can
-    // write code that fits the project instead of hallucinating the
-    // structure. We send this to the API only — the UI still shows
-    // the user's short typed message, not the 5KB context dump.
+    // Build a repo-context preamble for the first user message in
+    // the conversation. Same logic as before — the model needs to
+    // know what project it's working in.
     let apiUserContent = input.trim();
-    const displayUserContent = input.trim();
     if (messages.length === 0) {
       try {
         const paths = await listAllPaths(300);
@@ -876,134 +912,88 @@ My request:
       }
     }
 
-    // The displayed user message in the chat uses the short content;
-    // the API call uses the context-enriched content for turn 1.
-    const userMsg: ChatMessage = { role: "user", content: displayUserContent };
-    const allMessages = [...messages, userMsg];
+    // The displayed user message uses the short content; the API
+    // turn the agent loop sends uses the context-enriched version.
+    // Capture the trimmed input once so the onMessages closure below
+    // sees the value we had at send time, not whatever the input box
+    // contains later.
+    const displayText = input.trim();
+    const displayUserMsg: ChatMessage = {
+      role: "user",
+      content: displayText,
+    };
+    const apiUserMsg: ChatMessage = {
+      role: "user",
+      content: apiUserContent,
+    };
 
-    const apiMessages: { role: "user" | "assistant"; content: string }[] = [];
-    for (let idx = 0; idx < allMessages.length; idx++) {
-      const m = allMessages[idx];
-      if (idx === allMessages.length - 1 && m.role === "user") {
-        apiMessages.push({ role: "user", content: apiUserContent });
-      } else {
-        apiMessages.push({ role: m.role, content: m.content });
-      }
-    }
-
-    setMessages(allMessages);
     setInput("");
-    setStreaming(true);
 
-    try {
-      const res = await fetch("/api/vibe-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: apiMessages,
-          provider,
-          apiKey,
-          model,
-          baseUrl: provider === "custom" ? baseUrl : undefined,
-        }),
-      });
+    // The agent loop needs the full prior history + the
+    // context-enriched first user message. We hand it our current
+    // messages (minus the optimistic displayUserMsg, since runAgentLoop
+    // appends its own) and it takes care of the rest.
+    //
+    // To keep the UI in sync, we optimistically push the display user
+    // message right now and let the agent overwrite the last entry
+    // when it starts streaming.
+    const priorMessages = [...messages, displayUserMsg];
+    setMessages(priorMessages);
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: `Error (HTTP ${res.status}): ${
-              err.error || "Request failed"
-            }`,
-          },
-        ]);
-        setStreaming(false);
-        return;
-      }
-
-      const reader = res.body?.getReader();
-      if (!reader) return;
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let assistantContent = "";
-
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data: ")) continue;
-
-          try {
-            const parsed = JSON.parse(trimmed.slice(6));
-            if (parsed.type === "content" && parsed.text) {
-              assistantContent += parsed.text;
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1] = {
-                  role: "assistant",
-                  content: assistantContent,
-                };
-                return updated;
-              });
-            }
-          } catch {
-            /* skip malformed */
-          }
-        }
-      }
-
-      // Stream done — extract any code blocks that were tagged with a
-      // file path. Instead of writing them immediately, stage them in
-      // `pendingWrites` so the DiffModal can show the diff and the
-      // user can approve or reject each file before anything hits
-      // disk. Only on approval will we call writeFile().
-      const blocks = extractFileBlocks(assistantContent);
-      if (blocks.length > 0) {
-        const staged: PendingWrite[] = [];
-        for (const b of blocks) {
-          try {
-            const existing = await readFileOrEmpty(b.path);
-            staged.push({
-              path: b.path,
-              oldContent: existing,
-              newContent: b.content,
-              isNew: existing.length === 0,
+    await runAgentLoop(
+      apiUserMsg,
+      // The agent loop rebuilds the conversation from the prior
+      // messages it receives. We pass the context-enriched version
+      // of the current message via firstUserMessage, and pass the
+      // already-rendered history (minus that last turn) as prior.
+      messages,
+      {
+        provider,
+        apiKey,
+        model,
+        baseUrl: provider === "custom" ? baseUrl : undefined,
+      },
+      {
+        onMessages: (fn) => {
+          setMessages((prev) => {
+            // Keep the user's display message at the correct
+            // position — the agent loop's internal copy uses the
+            // context-enriched one, but the UI should show the
+            // short one. Patch it in post.
+            const next = fn(prev);
+            const withDisplay = next.map((m) => {
+              if (m.role === "user" && m.content === apiUserContent) {
+                return { ...m, content: displayText };
+              }
+              return m;
             });
-          } catch {
-            staged.push({
-              path: b.path,
-              oldContent: "",
-              newContent: b.content,
-              isNew: true,
-            });
-          }
-        }
-        setPendingWrites(staged);
-      }
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `Connection error: ${
-            err instanceof Error ? err.message : "Unknown error"
-          }. Check that your API key is correct and your network is reachable.`,
+            return withDisplay;
+          });
         },
-      ]);
-    } finally {
-      setStreaming(false);
-    }
+        onStageWrites: (staged) =>
+          new Promise((resolve) => {
+            writesResolverRef.current = resolve;
+            setPendingWrites(staged);
+          }),
+        onRunCheck: () =>
+          new Promise((resolve) => {
+            runCheckResolverRef.current = resolve;
+            setRunCheckInput("");
+            setRunCheckPrompt(
+              "Vibr wants to verify the latest changes. Paste any TypeScript / lint / runtime errors you're seeing (or leave blank if everything looks fine)."
+            );
+          }),
+        onStreamingChange: setStreaming,
+      }
+    );
+  };
+
+  const handleRunCheckSubmit = () => {
+    const resolver = runCheckResolverRef.current;
+    if (!resolver) return;
+    runCheckResolverRef.current = null;
+    setRunCheckPrompt(null);
+    resolver(runCheckInput.trim());
   };
 
   /* ── save prompt ── */
@@ -1241,8 +1231,38 @@ My request:
 
           {messages.map((msg, i) => {
             const isUser = msg.role === "user";
+            const contentIsArray = Array.isArray(msg.content);
+
+            // Tool-result-only user turns (the agent loop's plumbing)
+            // should not show a full "You" row — render them as a
+            // small collapsed breadcrumb instead.
+            if (
+              isUser &&
+              contentIsArray &&
+              (msg.content as ContentBlock[]).every(
+                (b) => b.type === "tool_result"
+              )
+            ) {
+              return null;
+            }
+
+            // Pull out the rendering pieces for this message.
+            const textForMarkdown: string = !contentIsArray
+              ? (msg.content as string)
+              : (msg.content as ContentBlock[])
+                  .filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text")
+                  .map((b) => b.text)
+                  .join("\n");
+            const toolUses: Extract<ContentBlock, { type: "tool_use" }>[] = contentIsArray
+              ? (msg.content as ContentBlock[]).filter(
+                  (b): b is Extract<ContentBlock, { type: "tool_use" }> =>
+                    b.type === "tool_use"
+                )
+              : [];
+
             const isLastAssistant =
               !isUser && i === messages.length - 1 && streaming;
+
             return (
               <div key={i} className="mb-10 first:mt-0">
                 {/* role label */}
@@ -1265,13 +1285,89 @@ My request:
                 <div className="pl-[38px]">
                   {isUser ? (
                     <div className="font-body text-[15px] text-foreground/90 leading-[1.7] whitespace-pre-wrap">
-                      {msg.content}
+                      {textForMarkdown}
                     </div>
                   ) : (
                     <div className="font-body text-[15px] text-foreground/90 leading-[1.7]">
-                      {renderMarkdown(msg.content)}
-                      {isLastAssistant && msg.content.length > 0 && (
+                      {textForMarkdown && renderMarkdown(textForMarkdown)}
+                      {isLastAssistant && textForMarkdown.length > 0 && (
                         <span className="inline-block w-[7px] h-[15px] bg-foreground/70 align-text-bottom ml-0.5 animate-pulse" />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tool calls (read_file, list_directory, write_file,
+                      run_check, finish) from the agent loop. Each gets
+                      its own Claude-Code-style breadcrumb row. */}
+                  {!isUser && toolUses.length > 0 && (
+                    <div className="mt-3 flex flex-col gap-1.5">
+                      {toolUses.map((t) => {
+                        const label =
+                          t.name === "read_file"
+                            ? "Read"
+                            : t.name === "list_directory"
+                              ? "List"
+                              : t.name === "write_file"
+                                ? "Write"
+                                : t.name === "run_check"
+                                  ? "Check"
+                                  : t.name === "finish"
+                                    ? "Finished"
+                                    : t.name;
+                        const detail =
+                          t.name === "read_file" || t.name === "write_file"
+                            ? (t.input.path as string) || ""
+                            : t.name === "list_directory"
+                              ? ((t.input.path as string) || "(root)")
+                              : t.name === "finish"
+                                ? (t.input.summary as string) || ""
+                                : "";
+                        return (
+                          <div
+                            key={t.id}
+                            className="flex items-center gap-2 font-mono text-[11.5px] text-muted"
+                          >
+                            <span className="text-emerald-400/70">›</span>
+                            <span className="uppercase tracking-wider text-[9.5px] text-muted/60 shrink-0">
+                              {label}
+                            </span>
+                            {detail && (
+                              <span className="text-foreground/80 truncate">
+                                {detail}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Finish summary + next steps */}
+                  {!isUser && msg.summary && (
+                    <div className="mt-4 border border-emerald-400/20 rounded-md bg-emerald-400/[0.03] p-4">
+                      <p className="font-body text-[11px] uppercase tracking-[0.18em] text-emerald-300/80 mb-2">
+                        Done
+                      </p>
+                      <p className="font-body text-[14px] text-foreground/90 leading-relaxed">
+                        {msg.summary}
+                      </p>
+                      {msg.nextSteps && msg.nextSteps.length > 0 && (
+                        <div className="mt-3">
+                          <p className="font-body text-[11px] uppercase tracking-[0.18em] text-muted/80 mb-1.5">
+                            What&rsquo;s next
+                          </p>
+                          <ul className="space-y-1">
+                            {msg.nextSteps.map((s, si) => (
+                              <li
+                                key={si}
+                                className="flex items-start gap-2 font-body text-[13px] text-muted"
+                              >
+                                <span className="text-muted/50 mt-[2px]">→</span>
+                                <span className="text-foreground/80">{s}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
                     </div>
                   )}
@@ -1307,10 +1403,17 @@ My request:
             );
           })}
 
-          {/* "thinking" indicator only when no assistant message has started yet */}
+          {/* "thinking" indicator only when no assistant text has started yet */}
           {streaming &&
-            (messages[messages.length - 1]?.role !== "assistant" ||
-              messages[messages.length - 1]?.content === "") && (
+            (() => {
+              const last = messages[messages.length - 1];
+              if (!last || last.role !== "assistant") return true;
+              if (typeof last.content === "string") return last.content === "";
+              const hasText = (last.content as ContentBlock[]).some(
+                (b) => b.type === "text" && b.text.length > 0
+              );
+              return !hasText;
+            })() && (
               <div className="mb-10 pl-[38px] flex items-center gap-2 font-body text-[13px] text-muted">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 animate-pulse" />
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/70 animate-pulse [animation-delay:150ms]" />
@@ -1472,6 +1575,46 @@ My request:
           onApply={handleApplyWrites}
           onCancel={handleRejectWrites}
         />
+      )}
+
+      {/* ── RUN CHECK MODAL ──
+          Shown when the agent calls the run_check tool. The user pastes
+          any errors they're seeing (or leaves blank) and hits Send —
+          the response is fed back into the agent loop as a tool_result. */}
+      {runCheckPrompt && (
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-background border border-border rounded-md w-full max-w-[560px] shadow-2xl">
+            <div className="px-5 py-4 border-b border-border">
+              <p className="font-body text-[11px] uppercase tracking-[0.18em] text-muted">
+                Error check
+              </p>
+              <h2 className="mt-1 font-heading font-light text-[20px] text-foreground">
+                Vibr wants a status report
+              </h2>
+            </div>
+            <div className="px-5 py-4">
+              <p className="font-body text-[13px] text-muted leading-relaxed mb-4">
+                {runCheckPrompt}
+              </p>
+              <textarea
+                value={runCheckInput}
+                onChange={(e) => setRunCheckInput(e.target.value)}
+                placeholder="Paste TypeScript / lint / runtime errors, or leave blank if it works."
+                rows={6}
+                className="w-full bg-[#0a0a0a] border border-border rounded-md font-mono text-[12px] text-foreground p-3 outline-none focus:border-foreground/40 resize-none"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border">
+              <button
+                type="button"
+                onClick={handleRunCheckSubmit}
+                className="bg-foreground text-background px-5 py-2.5 font-body text-[12px] uppercase tracking-[0.15em] hover:bg-foreground/90 transition-colors"
+              >
+                Send report
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── FILE CONTENT MODAL ── */}
