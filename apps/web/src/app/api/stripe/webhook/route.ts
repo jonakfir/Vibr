@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decryptSecret } from "@/lib/dashboard/secrets";
+
+// Force dynamic + node runtime; we use node:crypto + the service-role key.
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 /**
  * Stripe webhook ingest.
@@ -14,13 +18,25 @@ import { decryptSecret } from "@/lib/dashboard/secrets";
  *
  * This route uses the Supabase *service role* client because the RLS check
  * would otherwise fail (the caller is Stripe, not a user).
+ *
+ * IMPORTANT: the admin client is lazy-initialized so the module can be
+ * imported at build time without the env vars present (Next's "Collecting
+ * page data" step would otherwise crash with `supabaseUrl is required`).
  */
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-);
+let cachedAdmin: SupabaseClient | null = null;
+function getAdminClient(): SupabaseClient {
+  if (cachedAdmin) return cachedAdmin;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "Stripe webhook requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+    );
+  }
+  cachedAdmin = createClient(url, key, { auth: { persistSession: false } });
+  return cachedAdmin;
+}
 
 // Stripe's sig header format: `t=<ts>,v1=<hmac>`.
 function verify(payload: string, header: string, secret: string): boolean {
@@ -48,7 +64,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing X-Vibr-Company header" }, { status: 400 });
   }
 
-  const { data: integration } = await supabaseAdmin
+  const { data: integration } = await getAdminClient()
     .from("company_integrations")
     .select("encrypted_keys")
     .eq("company_id", companyId)
@@ -95,7 +111,7 @@ export async function POST(request: Request) {
   const currency = (obj.currency ?? "usd").toUpperCase();
   const signedAmount = kind === "refund" ? -Math.abs(amount) : amount;
 
-  const { error } = await supabaseAdmin.from("company_revenue").upsert(
+  const { error } = await getAdminClient().from("company_revenue").upsert(
     {
       company_id: companyId,
       source: "stripe",
@@ -113,7 +129,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await supabaseAdmin.from("company_audit_log").insert({
+  await getAdminClient().from("company_audit_log").insert({
     company_id: companyId,
     action: "stripe.ingest",
     payload: { event_type: event.type, external_id: event.id },
