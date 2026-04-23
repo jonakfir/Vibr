@@ -1,81 +1,45 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { WorkspaceSwitcher } from "@/components/dashboard/workspace-switcher";
+import { getActiveCompany, listUserCompanies } from "@/lib/dashboard/company";
+import { SignOutButton } from "@/components/dashboard/sign-out-button";
 
-function DashboardNav() {
-  const router = useRouter();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-  };
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [active, all] = await Promise.all([
+    getActiveCompany(),
+    listUserCompanies(),
+  ]);
 
   return (
-    <motion.nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-500 ${
-        scrolled
-          ? "bg-background/80 backdrop-blur-md border-b border-border"
-          : "border-b border-transparent"
-      }`}
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-    >
-      <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-background">
+      <header className="h-16 border-b border-border flex items-center px-6 gap-6">
         <Link
           href="/"
           className="font-heading font-light text-[20px] text-foreground"
         >
           Vibr
         </Link>
-
-        <div className="flex items-center gap-8">
+        <div className="h-5 w-px bg-border" />
+        <WorkspaceSwitcher active={active} all={all} />
+        <div className="flex-1" />
+        <nav className="flex items-center gap-6">
           <Link
             href="/onboarding"
             className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300"
           >
-            New Session
+            New session
           </Link>
-          <Link
-            href="/download"
-            className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300"
-          >
-            Download
-          </Link>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="font-body text-nav uppercase tracking-wide text-muted hover:text-foreground transition-colors duration-300"
-          >
-            Sign out
-          </button>
-        </div>
+          <SignOutButton />
+        </nav>
+      </header>
+      <div className="flex">
+        <DashboardSidebar />
+        <main className="flex-1 min-h-[calc(100vh-4rem)]">{children}</main>
       </div>
-    </motion.nav>
-  );
-}
-
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-h-screen bg-background">
-      <DashboardNav />
-      <div className="pt-16">{children}</div>
     </div>
   );
 }
